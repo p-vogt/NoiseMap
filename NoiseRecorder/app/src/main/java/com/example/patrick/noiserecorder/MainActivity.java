@@ -286,8 +286,7 @@ public class MainActivity extends AppCompatActivity {
         });
         final ListView lView = findViewById(R.id.lViewPositions);
         lView.setAdapter(adapter);
-
-
+        
         //==============TEST==========================================================================================================
         if (audioRecorder.getState() == AudioRecord.STATE_UNINITIALIZED) {
             Toast.makeText(MainActivity.this, "rec not initialized", Toast.LENGTH_SHORT).show();
