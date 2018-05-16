@@ -181,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
                 sumOfAmplitudes += dbFreqA;
             }
             else {
-                continue; // invalid magnitude, f.e. when still starting the recording
+                continue; // invalid magnitude, f.e. when the audio recorder still starting the recording
             }
         }
         // 7b
