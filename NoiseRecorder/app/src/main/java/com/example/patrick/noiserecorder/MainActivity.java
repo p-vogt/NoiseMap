@@ -80,8 +80,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     private static final String TAG = "MainActivity";
-    private static final int REFRESH_INTERVAL_MS = 1;
-    private static final int AUDIO_RECORD_TIME = 0; // TODO
 
     private int numberOfFFTs = 0;
     private double averageDB = 0;
