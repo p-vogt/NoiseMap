@@ -257,8 +257,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         super.onCreate(savedInstanceState);
-        calculateHannWindow();
-        calculateAWeighting();
+        initCalculations();
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, listItems);
         setContentView(R.layout.activity_main);
         requestQueue = Volley.newRequestQueue(this);
@@ -330,6 +329,11 @@ public class MainActivity extends AppCompatActivity {
         String GET_ALL_SAMPLES_URL = SERVER_API_URL + "Sample";
         StringRequest stringRequest = createGetRequest(GET_ALL_SAMPLES_URL,accessToken);
         requestQueue.add(stringRequest);*/
+    }
+
+    private void initCalculations() {
+        calculateHannWindow();
+        calculateAWeighting();
     }
     // ----------------------------------------------------------- TEST AREA --------------------------------------------------------
     /**
