@@ -2,6 +2,8 @@ package com.example.patrick.noiserecorder;
 
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -21,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLoadedCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLoadedCallback, GoogleMap.OnCameraIdleListener {
 
     final int DIRECTION_NORTHEAST = 45;
     final int DIRECTION_SOUTHEAST = 135;
@@ -38,19 +40,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        final Button btnRefresh = (Button) findViewById(R.id.refresh_map);
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                refresh();
+            }
+        });
     }
 
-    //TODO
-    LatLng bielefeld = new LatLng(52.0382444, 8.5257916);
-
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     */
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        map = googleMap;
-
+    private void refresh() {
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
@@ -86,31 +85,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         LatLng bielefeld2 = new LatLng(52.0392444, 8.5257916);
         double NUM_OF_RECTS_WIDTH = 10;
-        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / NUM_OF_RECTS_WIDTH / 2;
 
+        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / NUM_OF_RECTS_WIDTH / 2;
+        double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / radius / 2;
         //map.addMarker(new MarkerOptions().position(start));
         LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
 
         //map.addMarker(new MarkerOptions().position(start));
-        double offsetLong =  2 * (start.longitude - southWestVisible.longitude);
-        for(int i = 0; i < NUM_OF_RECTS_WIDTH; i++) {
+        double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
+        double offsetLat =  2 * (start.latitude - northWestVisible.latitude);
 
-            LatLng center = new LatLng(start.latitude,start.longitude+i*offsetLong);
+        for(int heightCounter = 0; heightCounter < numOfRectsHeight; heightCounter++) {
+            for(int widthCounter = 0; widthCounter < NUM_OF_RECTS_WIDTH; widthCounter++) {
 
-            LatLng targetNorthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHEAST);
-            LatLng targetNorthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
-            LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHWEST);
-            LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHWEST);
-            // Add a marker in Sydney and move the camera
+                LatLng center = new LatLng(start.latitude + heightCounter*offsetLat,start.longitude+widthCounter*offsetLong);
 
-            PolygonOptions rectOptions = new PolygonOptions()
-                    .add(targetSouthWest)
-                    .add(targetSouthEast)
-                    .add(targetNorthEast)
-                    .add(targetNorthWest)
-                    .fillColor(0x39ff0000+i*100)
-                    .strokeWidth(1.0f);
-            poly = map.addPolygon(rectOptions);
+                LatLng targetNorthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHEAST);
+                LatLng targetNorthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
+                LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHWEST);
+                LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHWEST);
+                // Add a marker in Sydney and move the camera
+
+                PolygonOptions rectOptions = new PolygonOptions()
+                        .add(targetSouthWest)
+                        .add(targetSouthEast)
+                        .add(targetNorthEast)
+                        .add(targetNorthWest)
+                        .fillColor(0x39ff0000)
+                        .strokeWidth(1.0f);
+                poly = map.addPolygon(rectOptions);
+            }
         }
         boolean isInLocation = PolyUtil.containsLocation(bielefeld,poly.getPoints(),true);
 
@@ -131,9 +135,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));*/
     }
+    //TODO
+    LatLng bielefeld = new LatLng(52.0382444, 8.5257916);
+
+    /**
+     * Manipulates the map once available.
+     * This callback is triggered when the map is ready to be used.
+     */
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        map = googleMap;
+        refresh();
+
+    }
 
     @Override
     public void onMapLoaded() {
+
+    }
+
+    @Override
+    public void onCameraIdle() {
 
     }
 }
