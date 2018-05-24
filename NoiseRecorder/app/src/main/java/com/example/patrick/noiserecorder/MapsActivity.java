@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -53,7 +55,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private List<Sample> samples = new ArrayList<>();
     private List<Polygon> polygons = new ArrayList<Polygon>();
 
-
+    private Switch switchGrid;
     private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
 
     private enum MapOverlayType {
@@ -79,6 +81,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        switchGrid = (Switch) findViewById(R.id.switchGrid);
         final Button btnRefresh = (Button) findViewById(R.id.refresh_map);
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -91,6 +94,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View view) {
                 toggleMapOverlay();
+            }
+        });
+        final Switch switchGrid = (Switch) findViewById(R.id.switchGrid);
+        switchGrid.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean showGrid) {
+
+                for(Polygon poly : polygons) {
+                    if(showGrid) {
+                        poly.setStrokeWidth(1.0f);
+                        poly.setVisible(true);
+                    } else {
+                        poly.setStrokeWidth(0f);
+                        if(poly.getFillColor() == 0) {
+                            poly.setVisible(false);
+                        }
+                    }
+                }
+
             }
         });
         //TODO
@@ -116,8 +138,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void toggleMapOverlay() {
         if(overlayType == MapOverlayType.OVERLAY_HEATMAP) {
             overlayType = MapOverlayType.OVERLAY_TILES;
+            switchGrid.setVisibility(View.VISIBLE);
         } else {
             overlayType = MapOverlayType.OVERLAY_HEATMAP;
+            switchGrid.setVisibility(View.INVISIBLE);
         }
         refresh();
     }
@@ -177,6 +201,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LatLng bielefeld2 = new LatLng(52.0392444, 8.5257916);
 
         Collection<WeightedLatLng> weightedSamples = new ArrayList<>();
+
+        boolean showGrid = switchGrid.isChecked();
         for(int heightCounter = 0; heightCounter < numOfRectsHeight; heightCounter++) {
             for(int widthCounter = 0; widthCounter < NUM_OF_RECTS_WIDTH; widthCounter++) {
 
@@ -208,7 +234,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     fillColor = (alpha << 24) | (red << 16 ) | (green<<8) | blue;
                     weightedSamples.add(new WeightedLatLng(center, normalizedNoise/100.0d));
                 }
-
                 if(overlayType == MapOverlayType.OVERLAY_TILES) {
                     PolygonOptions rectOptions = new PolygonOptions()
                             .add(targetSouthWest)
@@ -216,18 +241,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             .add(targetNorthEast)
                             .add(targetNorthWest)
                             .fillColor(fillColor)
-                            .strokeWidth(1.0f);
+                            .strokeWidth(0f);
+                    if(showGrid) {
+                        rectOptions.strokeWidth(1.0f);
+                    }
                     poly = map.addPolygon(rectOptions);
                     if(meanNoise > 0d) {
-                        poly.setTag(meanNoise + "db(A)");
+                        poly.setTag(String.format("%.2f",  meanNoise) + " db(A)");
                         poly.setClickable(true);
+                    } else {
+                        if(!showGrid) {
+                            poly.setVisible(false);
+                        }
                     }
                     polygons.add(poly);
 
                     map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
                         public void onPolygonClick(final Polygon polygon) {
+                            String displayText = "" + polygon.getTag();
                             Toast.makeText(MapsActivity.this,
-                                    ""+ polygon.getTag(),
+                                    displayText,
                                     Toast.LENGTH_LONG)
                                     .show();
 

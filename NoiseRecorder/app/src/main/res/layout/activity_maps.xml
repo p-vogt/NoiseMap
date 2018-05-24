@@ -12,23 +12,33 @@
         android:layout_height="46dp"
         android:paddingLeft="8dp"
          android:orientation="horizontal">
-    <Button
-        android:id="@+id/toggleMapOverlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="right|top"
-        android:text="Toggle"
-        android:padding="10dp"
-        android:layout_marginTop="10dp"
-        android:paddingRight="100dp"/>
-    <Button
-        android:id="@+id/refresh_map"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="right|top"
-        android:text="Refresh"
-        android:padding="10dp"
-        android:layout_marginTop="10dp"
-        android:paddingRight="10dp"/>
+        <Button
+            android:id="@+id/toggleMapOverlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right|top"
+            android:text="Toggle"
+            android:padding="10dp"
+            android:layout_marginTop="10dp"
+            android:paddingRight="100dp"/>
+        <Button
+            android:id="@+id/refresh_map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right|top"
+            android:text="Refresh"
+            android:padding="10dp"
+            android:layout_marginTop="10dp"
+            android:paddingRight="10dp"/>
+        <Switch
+            android:id="@+id/switchGrid"
+            android:layout_width="80dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="10dp"
+            android:text="Grid"
+            android:textOff="No"
+            android:textOn="Yes"
+            />
     </LinearLayout>
 </fragment>
