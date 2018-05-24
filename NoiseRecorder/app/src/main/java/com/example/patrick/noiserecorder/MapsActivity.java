@@ -1,8 +1,10 @@
 package com.example.patrick.noiserecorder;
 
 import android.graphics.Color;
+import android.os.SystemClock;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -12,12 +14,10 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.maps.android.SphericalUtil;
-import com.google.maps.android.heatmaps.Gradient;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
 
@@ -25,7 +25,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -57,11 +56,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
 
-    private enum MAP_OVERLAY_TYPE {
+    private enum MapOverlayType {
         OVERLAY_TILES,
         OVERLAY_HEATMAP
     }
-    private MAP_OVERLAY_TYPE overlayType = MAP_OVERLAY_TYPE.OVERLAY_TILES;
+
+    // used to stop the animation of a clicked polygon when another polygon has been clicked
+    private Polygon lastClickedPolygon ;
+    private void setLastClickedPolygon(Polygon poly) {
+        lastClickedPolygon = poly;
+    };
+    private Polygon getLastClickedPolygon() {
+        return lastClickedPolygon;
+    }
+
+    private MapOverlayType overlayType = MapOverlayType.OVERLAY_TILES;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -105,13 +114,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
     private void toggleMapOverlay() {
-        if(overlayType == MAP_OVERLAY_TYPE.OVERLAY_HEATMAP) {
-            overlayType = MAP_OVERLAY_TYPE.OVERLAY_TILES;
+        if(overlayType == MapOverlayType.OVERLAY_HEATMAP) {
+            overlayType = MapOverlayType.OVERLAY_TILES;
         } else {
-            overlayType = MAP_OVERLAY_TYPE.OVERLAY_HEATMAP;
+            overlayType = MapOverlayType.OVERLAY_HEATMAP;
         }
         refresh();
     }
+
     private void refresh() {
         map.clear();
         noiseMatrix.clear();
@@ -176,7 +186,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 LatLng targetNorthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
                 LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHWEST);
                 LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHWEST);
-                // Add a marker in Sydney and move the camera
+
                 double sum = 0.0;
                 List<Double> samplesInArea = noiseMatrix.get(heightCounter).get(widthCounter);
                 for (double curValue : samplesInArea) {
@@ -199,7 +209,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     weightedSamples.add(new WeightedLatLng(center, normalizedNoise/100.0d));
                 }
 
-                if(overlayType == MAP_OVERLAY_TYPE.OVERLAY_TILES) {
+                if(overlayType == MapOverlayType.OVERLAY_TILES) {
                     PolygonOptions rectOptions = new PolygonOptions()
                             .add(targetSouthWest)
                             .add(targetSouthEast)
@@ -215,11 +225,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     polygons.add(poly);
 
                     map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
-                        public void onPolygonClick(Polygon polygon) {
+                        public void onPolygonClick(final Polygon polygon) {
                             Toast.makeText(MapsActivity.this,
                                     ""+ polygon.getTag(),
-                                    Toast.LENGTH_SHORT).show();
+                                    Toast.LENGTH_LONG)
+                                    .show();
 
+                            MapsActivity.this.setLastClickedPolygon(polygon);
+                            // add animation (show border)
+                            final long start = SystemClock.uptimeMillis();
+                            final long animationDurationInMs = 1000;
+                            final long animationIntervalInMs = 100;
+                            final Handler handler = new Handler();
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    long elapsed = SystemClock.uptimeMillis() - start;
+                                    boolean hasTimeElapsed = elapsed >= animationDurationInMs;
+
+                                    //toggle visibility
+                                    polygon.setVisible(!polygon.isVisible());
+
+                                    boolean hasAnotherPolygonBeenClicked = MapsActivity.this.getLastClickedPolygon() != polygon;
+
+                                    if (hasTimeElapsed || hasAnotherPolygonBeenClicked) {
+                                        // animation stopped
+                                        polygon.setVisible(true);
+                                    } else {
+                                        // call again (delayed)
+                                        handler.postDelayed(this, animationIntervalInMs);
+                                    }
+                                }
+                            });
                         }
                     });
                 }
@@ -228,7 +265,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
 
-        if(overlayType == MAP_OVERLAY_TYPE.OVERLAY_HEATMAP) {
+        if(overlayType == MapOverlayType.OVERLAY_HEATMAP) {
             HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
                                                 .weightedData(weightedSamples)
                                                 .radius(50)
