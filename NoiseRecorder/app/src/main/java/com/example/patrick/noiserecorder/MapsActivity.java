@@ -14,7 +14,11 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.maps.android.SphericalUtil;
+import com.google.maps.android.heatmaps.Gradient;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.maps.android.heatmaps.WeightedLatLng;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -22,6 +26,7 @@ import org.json.JSONObject;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 //TODO
@@ -50,6 +55,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
+
+    private enum MAP_OVERLAY_TYPE {
+        OVERLAY_TILES,
+        OVERLAY_HEATMAP
+    }
+    private MAP_OVERLAY_TYPE overlayType = MAP_OVERLAY_TYPE.OVERLAY_TILES;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,7 +76,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 refresh();
             }
         });
-
+        final Button btnToggleMapOverlay = (Button) findViewById(R.id.toggleMapOverlay);
+        btnToggleMapOverlay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toggleMapOverlay();
+            }
+        });
         //TODO
         JSONArray responseArray;
         try {
@@ -81,15 +98,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     samples.add(new Sample(position, noise));
                 }
             }
-
-
-
         } catch (JSONException e) {
             e.printStackTrace();
             return; // TODO
         }
     }
-
+    private void toggleMapOverlay() {
+        if(overlayType == MAP_OVERLAY_TYPE.OVERLAY_HEATMAP) {
+            overlayType = MAP_OVERLAY_TYPE.OVERLAY_TILES;
+        } else {
+            overlayType = MAP_OVERLAY_TYPE.OVERLAY_HEATMAP;
+        }
+        refresh();
+    }
     private void refresh() {
         map.clear();
         noiseMatrix.clear();
@@ -144,7 +165,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         LatLng bielefeld2 = new LatLng(52.0392444, 8.5257916);
 
-
+        Collection<WeightedLatLng> weightedSamples = new ArrayList<>();
         for(int heightCounter = 0; heightCounter < numOfRectsHeight; heightCounter++) {
             for(int widthCounter = 0; widthCounter < NUM_OF_RECTS_WIDTH; widthCounter++) {
 
@@ -163,46 +184,49 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 double meanNoise = sum/samplesInArea.size();
                 int fillColor = 0;
+                int normalizedNoise = (int)(meanNoise-30)*75/25;
                 if(meanNoise > 0.0) {
-                    int n = (int)(meanNoise-30)*75/25;
+
                     int alpha = 220;
-                    int red = (255 * n) / 100;
-                    int green =255 * (100 - n)/ 100;
+                    int red = (255 * normalizedNoise) / 100;
+                    int green =255 * (100 - normalizedNoise)/ 100;
                     int blue = 0;
                     // convert rgb to argb integer
                     fillColor = (alpha << 24) | (red << 16 ) | (green<<8) | blue;
+                    weightedSamples.add(new WeightedLatLng(center, normalizedNoise/100.0d));
                 }
 
+                if(overlayType == MAP_OVERLAY_TYPE.OVERLAY_TILES) {
+                    PolygonOptions rectOptions = new PolygonOptions()
+                            .add(targetSouthWest)
+                            .add(targetSouthEast)
+                            .add(targetNorthEast)
+                            .add(targetNorthWest)
+                            .fillColor(fillColor)
+                            .strokeWidth(1.0f);
+                    poly = map.addPolygon(rectOptions);
+                    polygons.add(poly);
+                }
 
-                PolygonOptions rectOptions = new PolygonOptions()
-                        .add(targetSouthWest)
-                        .add(targetSouthEast)
-                        .add(targetNorthEast)
-                        .add(targetNorthWest)
-                        .fillColor(fillColor)
-                        .strokeWidth(1.0f);
-                poly = map.addPolygon(rectOptions);
-                polygons.add(poly);
             }
         }
 
 
+        if(overlayType == MAP_OVERLAY_TYPE.OVERLAY_HEATMAP) {
+            HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
+                                                .weightedData(weightedSamples)
+                                                .radius(50)
+                                                .build();
 
-        /*HeatmapTileProvider provider = new HeatmapTileProvider.Builder().weightedData(samples).build();
-        provider.setRadius(50);
-        // Create the gradient.
-        int[] colors = {
-                Color.rgb(102, 225, 0), // green
-                Color.rgb(255, 0, 0)    // red
-        };
+            // TODO own gradient?
+            // Create the gradient.
+            int[] colors = {
+                    Color.rgb(102, 225, 0), // green
+                    Color.rgb(255, 0, 0)    // red
+            };
 
-        float[] startPoints = {
-                0.01f, 0.1f
-        };
-        Gradient gradient = new Gradient(colors, startPoints);
-        provider.setGradient(gradient);
-
-        //map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));*/
+            map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+        }
     }
     //TODO
     LatLng bielefeld = new LatLng(52.0382444, 8.5257916);
