@@ -223,16 +223,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 int fillColor = 0;
 
                 //TODO customizable range
-                int normalizedNoise = (int)(meanNoise-30)*75/25;
+                double normalizedNoise = (meanNoise-30)*75/ 25.0d / 100.0d;
+                if(normalizedNoise > 1) {
+                    normalizedNoise = 1;
+                }
                 if(meanNoise > 0.0) {
 
-                    int alpha = 220;
-                    int red = (255 * normalizedNoise) / 100;
-                    int green =255 * (100 - normalizedNoise)/ 100;
-                    int blue = 0;
-                    // convert rgb to argb integer
-                    fillColor = (alpha << 24) | (red << 16 ) | (green<<8) | blue;
-                    weightedSamples.add(new WeightedLatLng(center, normalizedNoise/100.0d));
+                    fillColor = getArgbColor(normalizedNoise, 0.75);
+                    weightedSamples.add(new WeightedLatLng(center, normalizedNoise));
                 }
                 if(overlayType == MapOverlayType.OVERLAY_TILES) {
                     PolygonOptions rectOptions = new PolygonOptions()
@@ -314,6 +312,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
         }
     }
+
+    private int getArgbColor(double normalizedValue, double alpha) {
+        int fillColor;
+        int red = (int)(510 * normalizedValue);
+        if (red > 255) {
+            red = 255;
+        } else if (red < 0) {
+            red = 0;
+        }
+        int green =(int)( -510 * normalizedValue + 510);
+        if(green < 0) {
+            green = 0;
+        } else if (green > 255) {
+            green = 255;
+        }
+        int blue = 0;
+        int a = (int)(255*alpha);
+        // convert rgb to argb integer
+        fillColor = (a << 24) | (red << 16 ) | (green<<8) | blue;
+        return fillColor;
+    }
+
     //TODO
     LatLng bielefeld = new LatLng(52.0382444, 8.5257916);
 
