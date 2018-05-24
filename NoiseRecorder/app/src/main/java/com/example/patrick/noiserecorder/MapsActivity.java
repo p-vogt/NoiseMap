@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.Toast;
 
@@ -56,6 +57,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private List<Polygon> polygons = new ArrayList<Polygon>();
 
     private Switch switchGrid;
+    private SeekBar seekbarAlpha;
     private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
 
     private enum MapOverlayType {
@@ -82,6 +84,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         switchGrid = (Switch) findViewById(R.id.switchGrid);
+        seekbarAlpha= (SeekBar) findViewById(R.id.seekbarAlpha);
         final Button btnRefresh = (Button) findViewById(R.id.refresh_map);
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -115,6 +118,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         });
+        seekbarAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                double a = progress/100.d;
+                setPolygonAlpha(a);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
         //TODO
         JSONArray responseArray;
         try {
@@ -135,13 +155,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return; // TODO
         }
     }
+
+    private void setPolygonAlpha(double alpha) {
+        for(Polygon poly : polygons) {
+            int curColor = poly.getFillColor();
+            if(curColor != 0) {
+                curColor = curColor & 0x00ffffff;
+
+                poly.setFillColor((int)(alpha * 255) << 24 | curColor);
+            }
+
+        }
+    }
+
     private void toggleMapOverlay() {
         if(overlayType == MapOverlayType.OVERLAY_HEATMAP) {
             overlayType = MapOverlayType.OVERLAY_TILES;
             switchGrid.setVisibility(View.VISIBLE);
+            seekbarAlpha.setVisibility(View.VISIBLE);
         } else {
             overlayType = MapOverlayType.OVERLAY_HEATMAP;
             switchGrid.setVisibility(View.INVISIBLE);
+            seekbarAlpha.setVisibility(View.INVISIBLE);
         }
         refresh();
     }
@@ -229,7 +264,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 if(meanNoise > 0.0) {
 
-                    fillColor = getArgbColor(normalizedNoise, 0.75);
+                    fillColor = getArgbColor(normalizedNoise, seekbarAlpha.getProgress()/100.0d);
                     weightedSamples.add(new WeightedLatLng(center, normalizedNoise));
                 }
                 if(overlayType == MapOverlayType.OVERLAY_TILES) {
