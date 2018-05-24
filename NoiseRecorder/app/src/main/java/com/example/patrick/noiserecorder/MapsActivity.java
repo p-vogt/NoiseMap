@@ -5,6 +5,7 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -184,6 +185,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 double meanNoise = sum/samplesInArea.size();
                 int fillColor = 0;
+
+                //TODO customizable range
                 int normalizedNoise = (int)(meanNoise-30)*75/25;
                 if(meanNoise > 0.0) {
 
@@ -205,7 +208,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             .fillColor(fillColor)
                             .strokeWidth(1.0f);
                     poly = map.addPolygon(rectOptions);
+                    if(meanNoise > 0d) {
+                        poly.setTag(meanNoise + "db(A)");
+                        poly.setClickable(true);
+                    }
                     polygons.add(poly);
+
+                    map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
+                        public void onPolygonClick(Polygon polygon) {
+                            Toast.makeText(MapsActivity.this,
+                                    ""+ polygon.getTag(),
+                                    Toast.LENGTH_SHORT).show();
+
+                        }
+                    });
                 }
 
             }
