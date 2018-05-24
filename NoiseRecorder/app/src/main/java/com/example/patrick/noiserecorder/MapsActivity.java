@@ -6,9 +6,12 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.Toast;
 
@@ -17,6 +20,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.TileOverlayOptions;
@@ -103,19 +107,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         switchGrid.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean showGrid) {
-
-                for(Polygon poly : polygons) {
-                    if(showGrid) {
-                        poly.setStrokeWidth(1.0f);
-                        poly.setVisible(true);
-                    } else {
-                        poly.setStrokeWidth(0f);
-                        if(poly.getFillColor() == 0) {
-                            poly.setVisible(false);
-                        }
-                    }
-                }
-
+                setGridVisible(showGrid);
             }
         });
         seekbarAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -132,6 +124,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+        Spinner spinnerMapType = (Spinner) findViewById(R.id.mapTypeSpinner);
+        spinnerMapType.setBackgroundResource(android.R.drawable.btn_dropdown);
+        List<String> list = new ArrayList<String>();
+        list.add("Normal");
+        list.add("Satellit");
+        list.add("Terrain");
+        list.add("Hybrid");
+
+        ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, list);
+        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerMapType.setAdapter(dataAdapter);
+        spinnerMapType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                map.setMapType((int)id+1);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
 
             }
         });
@@ -153,6 +169,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (JSONException e) {
             e.printStackTrace();
             return; // TODO
+        }
+    }
+
+    private void setGridVisible(boolean showGrid) {
+        for(Polygon poly : polygons) {
+            if(showGrid) {
+                poly.setStrokeWidth(1.0f);
+                poly.setVisible(true);
+            } else {
+                poly.setStrokeWidth(0f);
+                if(poly.getFillColor() == 0) {
+                    poly.setVisible(false);
+                }
+            }
         }
     }
 
