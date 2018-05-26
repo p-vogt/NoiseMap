@@ -42,12 +42,15 @@ import com.android.volley.Response;
 import com.android.volley.ServerError;
 import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,10 +64,11 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      * Keep track of the login task to ensure we can cancel it if requested.
      */
     private UserLoginTask authTask = null;
-
+    private RegisterUserTask registerUserTask = null;
     // UI references.
     private AutoCompleteTextView usernameView;
     private EditText passwordView;
+    private EditText confirmPasswordView;
     private View mProgressView;
     private View mLoginFormView;
     private String accessToken;
@@ -81,6 +85,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         usernameView = (AutoCompleteTextView) findViewById(R.id.email);
 
         passwordView = (EditText) findViewById(R.id.password);
+        confirmPasswordView = (EditText) findViewById(R.id.confirmPassword);
         passwordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -112,6 +117,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             public void onClick(View view) {
                 btnSignIn.setEnabled(false);
                 btnRegister.setEnabled(false);
+
                 attemptRegister();
             }
         });
@@ -142,12 +148,49 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         //	"Password": "<pw>",
         //	"ConfirmPassword": "<pw>"
         //}
-
+        View focusView = null;
+        boolean cancel = false;
         final Button btnSignIn = (Button) findViewById(R.id.btn_SignIn);
         final Button btnRegister = (Button) findViewById(R.id.btn_register);
         btnSignIn.setEnabled(true);
         btnRegister.setEnabled(true);
 
+        // Store values at the time of the login attempt.
+        String email = usernameView.getText().toString();
+        String password = passwordView.getText().toString();
+        String confirmPassword = confirmPasswordView.getText().toString();
+
+        // Check for a valid password, if the user entered one.
+        if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
+            passwordView.setError(getString(R.string.error_invalid_password));
+            focusView = passwordView;
+            cancel = true;
+        }
+
+        // Check for a valid email address.
+        if (TextUtils.isEmpty(email)) {
+            usernameView.setError(getString(R.string.error_field_required));
+            focusView = usernameView;
+            cancel = true;
+        } else if (!isEmailValid(email)) {
+            usernameView.setError(getString(R.string.error_invalid_email));
+            focusView = usernameView;
+            cancel = true;
+        }
+
+        if (cancel) {
+            // There was an error; don't attempt login and focus the first
+            // form field with an error.
+            focusView.requestFocus();
+            btnSignIn.setEnabled(true);
+            btnRegister.setEnabled(true);
+        } else {
+            // Show a progress spinner, and kick off a background task to
+            // perform the user login attempt.
+            showProgress(true);
+            registerUserTask = new RegisterUserTask(email, password, confirmPassword);
+            registerUserTask.execute((Void) null);
+        }
         // TODO call attemptLogin() on success ?
     }
     /**
@@ -311,8 +354,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     }
 
     /**
-     * Represents an asynchronous login/registration task used to authenticate
-     * the user.
+     * Represents an asynchronous login task used to authenticate the user.
      */
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
         private static final String TAG = "UserLoginTask";
@@ -355,19 +397,184 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 passwordView.setError(getString(R.string.error_incorrect_password));
                 passwordView.requestFocus();
             }
-            final Button btnSignIn = (Button) findViewById(R.id.btn_SignIn);
-            final Button btnRegister = (Button) findViewById(R.id.btn_register);
-            btnSignIn.setEnabled(true);
-            btnRegister.setEnabled(true);
+            enableButtons();
         }
 
         @Override
         protected void onCancelled() {
             authTask = null;
             showProgress(false);
+            enableButtons();
         }
     }
+    /**
+     * Represents an asynchronous registration task used to register the user.
+     */
+    public class RegisterUserTask extends AsyncTask<Void, Void, Boolean> {
+        private static final String TAG = "UserRegisterTask";
+        private final String TOKEN_URL = "http://noisemaprestapi.azurewebsites.net/api/Account/Register";
+        private final String username;
+        private final String password;
+        private final String confirmPassword;
 
+        RegisterUserTask(String email, String password, String confirmPassword) {
+            this.username = email;
+            this.password = password;
+            this.confirmPassword = confirmPassword;
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... params) {
+
+            JsonRequest registerUserRequest = null;
+            try {
+                registerUserRequest = createRegisterUserRequest(username,password,confirmPassword,TOKEN_URL);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace(); // username, password or confirmationPassword == null
+            }
+            // increase accepted timeout duration, because the azure web api seems to go into a
+            // standby-ish mode when it gets no request for some time
+            int acceptedTimeoutMs = 15000;
+            registerUserRequest.setRetryPolicy(new DefaultRetryPolicy(
+                    acceptedTimeoutMs,
+                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+            requestQueue.add(registerUserRequest);
+
+            return true;
+        }
+
+        @Override
+        protected void onPostExecute(final Boolean success) {
+            authTask = null;
+
+            if (success) {
+                // finish();
+            } else {
+                passwordView.setError(getString(R.string.error_incorrect_password));
+                passwordView.requestFocus();
+            }
+            enableButtons();
+        }
+
+        @Override
+        protected void onCancelled() {
+            authTask = null;
+            showProgress(false);
+            enableButtons();
+        }
+    }
+    private JsonObjectRequest createRegisterUserRequest(final String username, final String password, final String confirmPassword, String url) throws IllegalAccessException {
+
+        if(username == null) throw new IllegalAccessException("username");
+        if(password == null) throw new IllegalAccessException("password");
+        if(confirmPassword == null) throw new IllegalAccessException("confirmPassword");
+
+        JSONObject jsonBody = new JSONObject(); // TODO
+        try {
+            jsonBody.put("username", username);
+            jsonBody.put("password", password);
+            jsonBody.put("confirmPassword", confirmPassword);
+        } catch (JSONException ex) {
+            // can not happen
+        }
+
+        return new JsonObjectRequest(url, jsonBody,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                            // TODO login user?
+                        showProgress(false);
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                String msg = "";
+                JSONObject obj;
+                String errorMsg = "unknown error";
+                boolean gotJsonResponse = false;
+                try {
+                    if(error != null && error.networkResponse != null && error.networkResponse.data != null) {
+                        msg = new String(error.networkResponse.data, "UTF-8");
+                        obj = new JSONObject(msg);
+                        if(obj.has("error_description")) {
+                            errorMsg = obj.getString("error_description");
+                            gotJsonResponse = true;
+                        } else if(obj.has("modelState")) {
+                            obj = obj.getJSONObject("modelState");
+                            if(obj.has("")) {
+                                errorMsg = obj.getString("");
+                            } else {
+                                errorMsg = obj.toString();
+                            }
+                            gotJsonResponse = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    if(e.getStackTrace() != null) {
+                        Log.e(this.getClass().getName(), e.getStackTrace().toString());
+                    }
+                    else {
+                        Log.e(this.getClass().getName(), e.getMessage());
+                    }
+                }
+                if(!gotJsonResponse) {
+                    if (error instanceof NetworkError) {
+                        Toast.makeText(LoginActivity.this,
+                                "Network error.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof ServerError) {
+                        Toast.makeText(LoginActivity.this,
+                                "Server responded with an error.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof AuthFailureError) {
+                        Toast.makeText(LoginActivity.this,
+                                "Authentication failed.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof ParseError) {
+                        Toast.makeText(LoginActivity.this,
+                                "Servers response could not be parsed.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof NoConnectionError) {
+                        Toast.makeText(LoginActivity.this,
+                                "Connection could not be established.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof TimeoutError) {
+                        Toast.makeText(LoginActivity.this,
+                                "Timeout error. Please try again.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+                showProgress(false);
+                Toast.makeText(LoginActivity.this, //TODO
+                        errorMsg,
+                        Toast.LENGTH_LONG).show();
+            }
+        }) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("grant_type", "password");
+                params.put("username", username);
+                params.put("password", password);
+                params.put("confirmPassword", confirmPassword);
+                return params;
+            }
+
+            @Override
+            public String getBodyContentType()
+            {
+                return "application/json; charset=utf-8";
+            }
+        };
+    }
+    private void enableButtons() {
+        final Button btnSignIn = (Button) findViewById(R.id.btn_SignIn);
+        final Button btnRegister = (Button) findViewById(R.id.btn_register);
+        btnSignIn.setEnabled(true);
+        btnRegister.setEnabled(true);
+    }
     // TODO extra class ?
 
     private StringRequest createApiTokenRequest(final String username, final String password, String url) {
@@ -432,7 +639,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                         if(error != null && error.networkResponse != null && error.networkResponse.data != null) {
                             msg = new String(error.networkResponse.data, "UTF-8");
                             obj = new JSONObject(msg);
-                            if(obj.has("error_description")); {
+                            if(obj.has("error_description")) {
                                 errorMsg = obj.getString("error_description");
                             }
                         }
