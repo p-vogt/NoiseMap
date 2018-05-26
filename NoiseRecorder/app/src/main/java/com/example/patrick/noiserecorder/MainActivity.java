@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
     private String accessToken;
     private RequestQueue requestQueue;
     private LocationManager locationManager;
-    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
+    private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
         @Override
@@ -101,8 +101,13 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.navigation_home:
                     textMessage.setText(R.string.title_home);
                     return true;
-                case R.id.navigation_dashboard:
+                case R.id.navigation_map:
+                    Bundle b = new Bundle();
                     textMessage.setText(R.string.title_dashboard);
+                    Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+                    b.putString("accessToken", accessToken);
+                    intent.putExtras(b);
+                    startActivity(intent);
                     return true;
                 case R.id.navigation_notifications:
                     textMessage.setText(R.string.title_notifications);
@@ -112,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // recordData()
@@ -251,10 +256,8 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, LocationTrackerService.class);
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
         // Register to receive messages.
-        // We are registering an observer (mMessageReceiver) to receive Intents
-        // with actions named "custom-event-name".
         LocalBroadcastManager.getInstance(this).registerReceiver(
-                mMessageReceiver, new IntentFilter("new-location"));
+                messageReceiver, new IntentFilter("new-location"));
 
 
         super.onCreate(savedInstanceState);
@@ -265,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         textMessage = (TextView) findViewById(R.id.message);
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+        navigation.setOnNavigationItemSelectedListener(onNavigationItemSelectedListener);
 
         Bundle b = getIntent().getExtras();
         if (b != null) {

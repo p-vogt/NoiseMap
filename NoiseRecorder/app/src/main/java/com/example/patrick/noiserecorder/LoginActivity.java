@@ -388,9 +388,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                             editor.putString("Password",password);
                             editor.commit();
 
-                            //Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                            Intent intent = new Intent(LoginActivity.this, MapsActivity.class);
-                            intent.putExtras(b); //Put your id to your next Intent
+                            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                            intent.putExtras(b);
                             startActivity(intent);
                         } catch (JSONException e) {
                             Log.e(this.getClass().getName(), e.getStackTrace().toString());

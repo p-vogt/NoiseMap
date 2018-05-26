@@ -130,7 +130,6 @@ public class LocationTrackerService extends Service implements ServiceConnection
         }
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
 
-        Toast.makeText(getApplicationContext(), "binding", Toast.LENGTH_SHORT).show();
         return messenger.getBinder();
     }
 
