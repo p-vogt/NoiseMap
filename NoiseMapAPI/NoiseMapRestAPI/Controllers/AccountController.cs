@@ -9,7 +9,9 @@ using NoiseMapRestAPI.Providers;
 using NoiseMapRestAPI.Results;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Formatting;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -333,7 +335,8 @@ namespace NoiseMapRestAPI.Controllers
                 return GetErrorResult(result);
             }
 
-            return Ok();
+            var obj = Newtonsoft.Json.JsonConvert.DeserializeObject("{\"status\": \"success\"}");
+            return Json(obj);
         }
 
         // POST api/Account/RegisterExternal
