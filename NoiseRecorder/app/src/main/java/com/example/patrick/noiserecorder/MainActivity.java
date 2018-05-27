@@ -48,7 +48,6 @@ import org.json.JSONObject;
 import org.jtransforms.fft.DoubleFFT_1D;
 
 import java.io.UnsupportedEncodingException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.ArrayList;
@@ -219,6 +218,12 @@ public class MainActivity extends AppCompatActivity {
             requestLocation();
             numberOfFFTs = 0;
             averageDB = 0;
+
+
+            // plot output TODO move and change output
+            String dbOutput = "" + MainActivity.this.lastAverageDb;
+            adapter.insert(dbOutput,0);
+            adapter.notifyDataSetChanged();
             return DELAY_BETWEEN_MEASUREMENTS_IN_MS;
         }
         return 1;
@@ -228,7 +233,10 @@ public class MainActivity extends AppCompatActivity {
         audioRecorder.stop();
         isRecording = false;
     }
-    private void postNewSample(JSONObject sampleBody) {
+    public double getLastAverageDb() {
+        return lastAverageDb;
+    }
+    public void postNewSample(JSONObject sampleBody) {
 
         //TODO move
         String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
@@ -248,19 +256,7 @@ public class MainActivity extends AppCompatActivity {
         // Bind to LocalService
         Intent locationIntent = new Intent(this, LocationTrackerService.class);
         bindService(locationIntent, connection, Context.BIND_AUTO_CREATE);
-        messageReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-
-                JSONObject jsonBody = getJSONLocationMessageFromIntent(intent);
-                postNewSample(jsonBody);
-
-                // plot output TODO
-                String dbOutput = "" + MainActivity.this.lastAverageDb;
-                adapter.insert(dbOutput,0);
-                adapter.notifyDataSetChanged();
-            }
-        };
+        messageReceiver = new LocationTrackerBroadcastReceiver(this);
         // Register to receive messages.
         LocalBroadcastManager.getInstance(this).registerReceiver(
                 messageReceiver, new IntentFilter("new-location"));
@@ -327,45 +323,6 @@ public class MainActivity extends AppCompatActivity {
 
         //Start
         handler.post(runnable);
-        /*
-        //TODO move
-        String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/";
-        String GET_ALL_SAMPLES_URL = SERVER_API_URL + "Sample";
-        StringRequest stringRequest = createGetRequest(GET_ALL_SAMPLES_URL,accessToken);
-        requestQueue.add(stringRequest);*/
-    }
-
-    private JSONObject getJSONLocationMessageFromIntent(Intent intent) {
-        JSONObject message;
-        try {
-            message = new JSONObject(intent.getStringExtra("message"));
-        } catch (JSONException e) {
-            e.printStackTrace(); // TODO
-            return new JSONObject();
-        }
-        // TODO use time offset from location
-        Calendar calendar = Calendar.getInstance();
-        SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        String timestamp = timestampFormat.format(calendar.getTime());
-
-        JSONObject jsonBody = new JSONObject();
-        try {
-            jsonBody.put("timestamp", timestamp);
-            jsonBody.put("noiseValue", MainActivity.this.lastAverageDb);
-            jsonBody.put("longitude", message.getDouble("longitude"));
-            jsonBody.put("latitude", message.getDouble("latitude"));
-            jsonBody.put("accuracy", message.getDouble("accuracy"));
-            jsonBody.put("speed", message.getDouble("speed"));
-            jsonBody.put("version", "AAAAAAAAB9g="); // TODO ??
-            jsonBody.put("createdAt", timestamp);
-            jsonBody.put("updatedAt", timestamp);
-            jsonBody.put("deleted", false);
-
-        } catch (JSONException e) {
-            e.printStackTrace(); // TODO
-            return new JSONObject();
-        }
-        return jsonBody;
     }
 
     private void initCalculations() {
