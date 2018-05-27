@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.location.LocationManager;
 import android.media.AudioRecord;
 import android.os.Bundle;
 import android.os.Handler;
@@ -53,7 +52,7 @@ import java.util.HashMap;
 import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
-    private FFTUtil fft = new FFTUtil();
+    private AudioProcessing fft = new AudioProcessing();
     private boolean isBound = false;
     private Messenger service;
     private double lastAverageDb = -1.0d;

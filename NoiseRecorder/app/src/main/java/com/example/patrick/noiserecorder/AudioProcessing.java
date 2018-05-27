@@ -1,13 +1,8 @@
 package com.example.patrick.noiserecorder;
-
-import android.view.WindowManager;
-
-import java.util.Calendar;
-import java.util.Date;
 import org.jtransforms.fft.DoubleFFT_1D;
 
 
-public class FFTUtil {
+public class AudioProcessing {
 
     final DoubleFFT_1D fft = new DoubleFFT_1D(RecordingConfig.BLOCK_SIZE_FFT);
     double window_function[] = new double[RecordingConfig.BLOCK_SIZE_FFT];
@@ -15,7 +10,7 @@ public class FFTUtil {
     private int numberOfFFTs = 0;
     private double averageDB = 0;
 
-    FFTUtil() {
+    AudioProcessing() {
 
         initCalculations();
     }
