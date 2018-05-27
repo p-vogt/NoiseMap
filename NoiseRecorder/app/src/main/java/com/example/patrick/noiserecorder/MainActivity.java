@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     final int BUFFER_SIZE_IN_BYTES = AudioRecord.getMinBufferSize(SAMPLE_RATE_IN_HZ, CHANNEL_CONFIG, AUDIO_FORMAT);
     final double FREQUENCY_RESOLUTION = SAMPLE_RATE_IN_HZ / (double) BLOCK_SIZE_FFT;
     final DoubleFFT_1D fft = new DoubleFFT_1D(BLOCK_SIZE_FFT);
+    private double lastAverageDb = -1.0d;
     boolean isRecording = false;
     AudioRecord audioRecorder = new AudioRecord(
                                         AUDIO_SOURCE,
@@ -86,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private static final String TAG = "MainActivity";
-
+    private Intent locationIntent = null;
     private int numberOfFFTs = 0;
     private double averageDB = 0;
     private double[] a_weighting = new double[BLOCK_SIZE_FFT];
@@ -98,6 +99,8 @@ public class MainActivity extends AppCompatActivity {
     private String accessToken;
     private RequestQueue requestQueue;
     private LocationManager locationManager;
+    private BroadcastReceiver messageReceiver;
+
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -120,13 +123,6 @@ public class MainActivity extends AppCompatActivity {
                     return true;
             }
             return false;
-        }
-    };
-
-    private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            // recordData()
         }
     };
 
@@ -211,63 +207,18 @@ public class MainActivity extends AppCompatActivity {
         }
         averageDB += curAverage_dB;
         // TODO außerhalb init
-        /*
-        JSONObject message;
-        try {
-            message = new JSONObject(intent.getStringExtra("message"));
-        } catch (JSONException e) {
-            e.printStackTrace(); // TODO
-            return;
-        }
-        // TODO use time offset from location
-        Calendar calendar = Calendar.getInstance();
-        SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        String timestamp = timestampFormat.format(calendar.getTime());
-
-        //TODO move
-        String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
-        String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
-
-        JSONObject jsonBody = new JSONObject();
-        try {
-            jsonBody.put("timestamp", timestamp);
-            jsonBody.put("noiseValue", average);
-            jsonBody.put("longitude", message.getDouble("longitude"));
-            jsonBody.put("latitude", message.getDouble("latitude"));
-            jsonBody.put("accuracy", message.getDouble("accuracy"));
-            jsonBody.put("speed", message.getDouble("speed"));
-            jsonBody.put("version", "AAAAAAAAB9g="); // TODO ??
-            jsonBody.put("createdAt", timestamp);
-            jsonBody.put("updatedAt", timestamp);
-            jsonBody.put("deleted", false);
-
-        } catch (JSONException e) {
-            e.printStackTrace(); // TODO
-        }
-
-
-        JsonObjectRequest postSample =  createPostSample(jsonBody, POST_SAMPLE_URL);
-        // requestQueue.add(postSample);*/
-
-        String msgStr = ""; // TODO
-        Log.d("receiver", "Got message: " + msgStr);
 
         //if(numberOfFFTs >= FFTS_PER_SECOND * RECORDING_DURATION_IN_MS/1000) {
         Calendar calendar = Calendar.getInstance();
         Date curTime = calendar.getTime();
         long currentRecordingTimeInMs = curTime.getTime() - timeStartedRecordingInMs;
         if(currentRecordingTimeInMs >= RECORDING_DURATION_IN_MS) {
+            stopRecording();
             averageDB = averageDB / numberOfFFTs ;
-
-            SimpleDateFormat timestampFormat = new SimpleDateFormat("HH:mm:ss");
-            String timestamp = timestampFormat.format(curTime);
-
-            String dbOutput =  timestamp +" " + averageDB;
-            adapter.insert(dbOutput,0);
-            adapter.notifyDataSetChanged();
+            lastAverageDb = averageDB;
+            requestLocation();
             numberOfFFTs = 0;
             averageDB = 0;
-            stopRecording();
             return DELAY_BETWEEN_MEASUREMENTS_IN_MS;
         }
         return 1;
@@ -277,18 +228,43 @@ public class MainActivity extends AppCompatActivity {
         audioRecorder.stop();
         isRecording = false;
     }
+    private void postNewSample(JSONObject sampleBody) {
 
+        //TODO move
+        String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
+        String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
+
+
+        JsonObjectRequest postSample =  createPostSample(sampleBody, POST_SAMPLE_URL);
+        // requestQueue.add(postSample);
+
+        String msgStr = ""; // TODO
+        Log.d("receiver", "Got message: " + msgStr);
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
         // Bind to LocalService
-        Intent intent = new Intent(this, LocationTrackerService.class);
-        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        Intent locationIntent = new Intent(this, LocationTrackerService.class);
+        bindService(locationIntent, connection, Context.BIND_AUTO_CREATE);
+        messageReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+                JSONObject jsonBody = getJSONLocationMessageFromIntent(intent);
+                postNewSample(jsonBody);
+
+                // plot output TODO
+                String dbOutput = "" + MainActivity.this.lastAverageDb;
+                adapter.insert(dbOutput,0);
+                adapter.notifyDataSetChanged();
+            }
+        };
         // Register to receive messages.
         LocalBroadcastManager.getInstance(this).registerReceiver(
                 messageReceiver, new IntentFilter("new-location"));
 
-
-        super.onCreate(savedInstanceState);
         initCalculations();
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, listItems);
         setContentView(R.layout.activity_main);
@@ -344,9 +320,7 @@ public class MainActivity extends AppCompatActivity {
                 if(!isRecording) {
                     startRecording();
                 }
-               // MainActivity.this.requestLocation();
                 final int delayTimeToNextCall = recordData();
-               // handler.postDelayed(this, REFRESH_INTERVAL_MS -  );
                 handler.postDelayed(this,delayTimeToNextCall);
             }
         };
@@ -359,6 +333,39 @@ public class MainActivity extends AppCompatActivity {
         String GET_ALL_SAMPLES_URL = SERVER_API_URL + "Sample";
         StringRequest stringRequest = createGetRequest(GET_ALL_SAMPLES_URL,accessToken);
         requestQueue.add(stringRequest);*/
+    }
+
+    private JSONObject getJSONLocationMessageFromIntent(Intent intent) {
+        JSONObject message;
+        try {
+            message = new JSONObject(intent.getStringExtra("message"));
+        } catch (JSONException e) {
+            e.printStackTrace(); // TODO
+            return new JSONObject();
+        }
+        // TODO use time offset from location
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        String timestamp = timestampFormat.format(calendar.getTime());
+
+        JSONObject jsonBody = new JSONObject();
+        try {
+            jsonBody.put("timestamp", timestamp);
+            jsonBody.put("noiseValue", MainActivity.this.lastAverageDb);
+            jsonBody.put("longitude", message.getDouble("longitude"));
+            jsonBody.put("latitude", message.getDouble("latitude"));
+            jsonBody.put("accuracy", message.getDouble("accuracy"));
+            jsonBody.put("speed", message.getDouble("speed"));
+            jsonBody.put("version", "AAAAAAAAB9g="); // TODO ??
+            jsonBody.put("createdAt", timestamp);
+            jsonBody.put("updatedAt", timestamp);
+            jsonBody.put("deleted", false);
+
+        } catch (JSONException e) {
+            e.printStackTrace(); // TODO
+            return new JSONObject();
+        }
+        return jsonBody;
     }
 
     private void initCalculations() {
@@ -390,12 +397,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void requestLocation() {
         if (!isBound) return;
-        // Create and send a message to the service, using a supported 'what' value
+        // send request location message to the LocationTrackerService
         Message msg = Message.obtain(null, LocationTrackerService.MSG_REQUEST_LOCATION, 0, 0);
         try {
             service.send(msg);
         } catch (RemoteException e) {
-            e.printStackTrace();
+            e.printStackTrace(); // TODO
         }
     }
 
