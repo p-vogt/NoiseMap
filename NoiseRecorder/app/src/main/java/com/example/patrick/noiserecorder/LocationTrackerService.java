@@ -27,9 +27,6 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-
 public class LocationTrackerService extends Service implements ServiceConnection {
 
 
