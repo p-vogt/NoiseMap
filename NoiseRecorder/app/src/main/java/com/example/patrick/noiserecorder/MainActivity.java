@@ -48,6 +48,9 @@ import org.json.JSONObject;
 import org.jtransforms.fft.DoubleFFT_1D;
 
 import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -59,7 +62,10 @@ public class MainActivity extends AppCompatActivity {
     final int SAMPLE_RATE_IN_HZ = 44100;
     final int FFTS_PER_SECOND = 20;
 
-    final int UPDATE_INTERVAL_IN_S = 1;
+    final int TIME_BETWEEN_MEASUREMENTS_IN_MS = 5000;
+    final int RECORDING_DURATION_IN_MS = 1000;
+
+    final int DELAY_BETWEEN_MEASUREMENTS_IN_MS = TIME_BETWEEN_MEASUREMENTS_IN_MS - RECORDING_DURATION_IN_MS;
 
     final int BLOCK_SIZE_FFT = SAMPLE_RATE_IN_HZ / FFTS_PER_SECOND;
 
@@ -139,15 +145,21 @@ public class MainActivity extends AppCompatActivity {
             a_weighting[i] = (12200 * 12200 * f4) / ((f2 + 20.6 * 20.6) * (f2 + 12200 * 12200) * Math.sqrt(f2 + 107.7 * 107.7) * Math.sqrt(f2 + 737.9 * 737.9));
         }
     }
+    private long timeStartedRecordingInMs;
+    private void startRecording() {
+        isRecording = true;
+        Calendar calendar = Calendar.getInstance();
+        timeStartedRecordingInMs = calendar.getTimeInMillis();
+        audioRecorder.startRecording();
 
-    private void recordData() {
+    }
+    private int recordData() {
         short[] valueBuffer = new short[BLOCK_SIZE_FFT];
         int read;
         read = audioRecorder.read(valueBuffer, 0, BLOCK_SIZE_FFT);
         if(read < 0) {
-            return; // TODO
+            return 1; // TODO
         }
-       // audioRecorder.stop(); // TODO
 
         double vals[] = new double[BLOCK_SIZE_FFT];
 
@@ -195,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
             curAverage_dB = 10*Math.log10(sumOfAmplitudes);
             numberOfFFTs++;
         } else {
-            return;
+            return 1;
         }
         averageDB += curAverage_dB;
         // TODO außerhalb init
@@ -240,14 +252,30 @@ public class MainActivity extends AppCompatActivity {
         String msgStr = ""; // TODO
         Log.d("receiver", "Got message: " + msgStr);
 
-        if(numberOfFFTs >= FFTS_PER_SECOND * UPDATE_INTERVAL_IN_S) {
+        //if(numberOfFFTs >= FFTS_PER_SECOND * RECORDING_DURATION_IN_MS/1000) {
+        Calendar calendar = Calendar.getInstance();
+        Date curTime = calendar.getTime();
+        long currentRecordingTimeInMs = curTime.getTime() - timeStartedRecordingInMs;
+        if(currentRecordingTimeInMs >= RECORDING_DURATION_IN_MS) {
             averageDB = averageDB / numberOfFFTs ;
-            String dbOutput =  "" + averageDB;
+
+            SimpleDateFormat timestampFormat = new SimpleDateFormat("HH:mm:ss");
+            String timestamp = timestampFormat.format(curTime);
+
+            String dbOutput =  timestamp +" " + averageDB;
             adapter.insert(dbOutput,0);
             adapter.notifyDataSetChanged();
             numberOfFFTs = 0;
             averageDB = 0;
+            stopRecording();
+            return DELAY_BETWEEN_MEASUREMENTS_IN_MS;
         }
+        return 1;
+    }
+
+    private void stopRecording() {
+        audioRecorder.stop();
+        isRecording = false;
     }
 
     @Override
@@ -296,11 +324,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(MainActivity.this, "rec not initialized", Toast.LENGTH_SHORT).show();
             return;
         }
-        isRecording = true;
         //========================================================================================================================
-
-        // Init
-        audioRecorder.startRecording();
 
         final Handler handler = new Handler();
         Runnable runnable = new Runnable() {
@@ -316,11 +340,14 @@ public class MainActivity extends AppCompatActivity {
                     // for ActivityCompat#requestPermissions for more details.
                     return;
                 }
-                //audioRecorder.startRecording();
+
+                if(!isRecording) {
+                    startRecording();
+                }
                // MainActivity.this.requestLocation();
-                recordData();
+                final int delayTimeToNextCall = recordData();
                // handler.postDelayed(this, REFRESH_INTERVAL_MS -  );
-                handler.postDelayed(this,1);
+                handler.postDelayed(this,delayTimeToNextCall);
             }
         };
 
