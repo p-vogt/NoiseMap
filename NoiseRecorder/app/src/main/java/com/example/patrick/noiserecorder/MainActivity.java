@@ -10,9 +10,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.LocationManager;
-import android.media.AudioFormat;
 import android.media.AudioRecord;
-import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -45,7 +43,7 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.jtransforms.fft.DoubleFFT_1D;
+
 
 import java.io.UnsupportedEncodingException;
 import java.util.Calendar;
@@ -55,49 +53,28 @@ import java.util.HashMap;
 import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
+    private FFTUtil fft = new FFTUtil();
     private boolean isBound = false;
     private Messenger service;
-
-    final int SAMPLE_RATE_IN_HZ = 44100;
-    final int FFTS_PER_SECOND = 20;
-
-    final int TIME_BETWEEN_MEASUREMENTS_IN_MS = 5000;
-    final int RECORDING_DURATION_IN_MS = 1000;
-
-    final int DELAY_BETWEEN_MEASUREMENTS_IN_MS = TIME_BETWEEN_MEASUREMENTS_IN_MS - RECORDING_DURATION_IN_MS;
-
-    final int BLOCK_SIZE_FFT = SAMPLE_RATE_IN_HZ / FFTS_PER_SECOND;
-
-    // VOICE_RECOGNITION avoids some audio preprocessing
-    final int AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_RECOGNITION;
-    final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
-    final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
-    final int BUFFER_SIZE_IN_BYTES = AudioRecord.getMinBufferSize(SAMPLE_RATE_IN_HZ, CHANNEL_CONFIG, AUDIO_FORMAT);
-    final double FREQUENCY_RESOLUTION = SAMPLE_RATE_IN_HZ / (double) BLOCK_SIZE_FFT;
-    final DoubleFFT_1D fft = new DoubleFFT_1D(BLOCK_SIZE_FFT);
     private double lastAverageDb = -1.0d;
     boolean isRecording = false;
+    private long timeStartedRecordingInMs;
+
     AudioRecord audioRecorder = new AudioRecord(
-                                        AUDIO_SOURCE,
-                                        SAMPLE_RATE_IN_HZ,
-                                        CHANNEL_CONFIG,
-                                        AUDIO_FORMAT,
-                                        BUFFER_SIZE_IN_BYTES);
+                                        RecordingConfig.AUDIO_SOURCE,
+                                        RecordingConfig.SAMPLE_RATE_IN_HZ,
+                                        RecordingConfig.CHANNEL_CONFIG,
+                                        RecordingConfig.AUDIO_FORMAT,
+                                        RecordingConfig.BUFFER_SIZE_IN_BYTES);
 
 
     private static final String TAG = "MainActivity";
-    private Intent locationIntent = null;
-    private int numberOfFFTs = 0;
-    private double averageDB = 0;
-    private double[] a_weighting = new double[BLOCK_SIZE_FFT];
-    double window_function[] = new double[BLOCK_SIZE_FFT];
     final ArrayList<String> listItems = new ArrayList<>();
     ArrayAdapter<String> adapter;
 
     private TextView textMessage;
     private String accessToken;
     private RequestQueue requestQueue;
-    private LocationManager locationManager;
     private BroadcastReceiver messageReceiver;
 
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
@@ -125,23 +102,8 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private void calculateHannWindow() {
-        for(int i = 0; i < BLOCK_SIZE_FFT; i++) {
-            double hanningTemp = (2*Math.PI * i) / (BLOCK_SIZE_FFT - 1 );
-            window_function[i] = (1 - Math.cos(hanningTemp)) * 0.5;
-        }
-    }
-
-    private void calculateAWeighting() {
-        for (int i = 0; i< BLOCK_SIZE_FFT /2; i++) {
-            double f = i * FREQUENCY_RESOLUTION;
-            double f2 = f * f;
-            double f4 = f2 * f2;
-            a_weighting[i] = (12200 * 12200 * f4) / ((f2 + 20.6 * 20.6) * (f2 + 12200 * 12200) * Math.sqrt(f2 + 107.7 * 107.7) * Math.sqrt(f2 + 737.9 * 737.9));
-        }
-    }
-    private long timeStartedRecordingInMs;
     private void startRecording() {
+
         isRecording = true;
         Calendar calendar = Calendar.getInstance();
         timeStartedRecordingInMs = calendar.getTimeInMillis();
@@ -149,83 +111,28 @@ public class MainActivity extends AppCompatActivity {
 
     }
     private int recordData() {
-        short[] valueBuffer = new short[BLOCK_SIZE_FFT];
+        short[] valueBuffer = new short[RecordingConfig.BLOCK_SIZE_FFT];
         int read;
-        read = audioRecorder.read(valueBuffer, 0, BLOCK_SIZE_FFT);
+        read = audioRecorder.read(valueBuffer, 0, RecordingConfig.BLOCK_SIZE_FFT);
         if(read < 0) {
             return 1; // TODO
         }
 
-        double vals[] = new double[BLOCK_SIZE_FFT];
-
-        for (int i = 0; i < BLOCK_SIZE_FFT; i++) {
-            double normalized =  valueBuffer[i] / (double) Short.MAX_VALUE;
-            vals[i] = normalized * window_function[i];
-        }
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); //TODO
-
-        //==================
-        //calculate fft
-        //==================
-        fft.realForward(vals);
-
-        double sumOfAmplitudes = 0;
-
-        // only half of the fft block size, because we now have real + imag values
-        for (int i = 0; i < BLOCK_SIZE_FFT/2; i++) {
-
-            double real = vals[2*i];
-            double imag = vals[2*i+1];
-            // TODO setting + configurable
-            double calibration_offset = -1.75; // in dBA
-            // TODO Window_sample_count/2 correct?
-            //763
-            double magn = Math.sqrt(real*real+imag*imag);
-
-            // threshold of the human hearing = reference for the db calculation
-            final double amplitudeRef = 0.00002;
-            if(magn > 0.0 ) {
-                // 5
-                double dbFreqA = (10.0 * Math.log10(magn*magn*a_weighting[i]/amplitudeRef) + calibration_offset);
-                //6
-                dbFreqA = (10.0 * Math.pow(10,dbFreqA/10));
-                // 7a sum in log
-                sumOfAmplitudes += dbFreqA;
-            }
-            else {
-                continue; // invalid magnitude, f.e. when the audio recorder still starting the recording
-            }
-        }
-        // 7b
-        double curAverage_dB;
-        if(sumOfAmplitudes > 0) {
-            curAverage_dB = 10*Math.log10(sumOfAmplitudes);
-            numberOfFFTs++;
-        } else {
-            return 1;
-        }
-        averageDB += curAverage_dB;
-        // TODO außerhalb init
-
-        //if(numberOfFFTs >= FFTS_PER_SECOND * RECORDING_DURATION_IN_MS/1000) {
+        fft.process(valueBuffer);
         Calendar calendar = Calendar.getInstance();
         Date curTime = calendar.getTime();
         long currentRecordingTimeInMs = curTime.getTime() - timeStartedRecordingInMs;
-        if(currentRecordingTimeInMs >= RECORDING_DURATION_IN_MS) {
+        if(currentRecordingTimeInMs >= RecordingConfig.RECORDING_DURATION_IN_MS) {
             stopRecording();
-            averageDB = averageDB / numberOfFFTs ;
-            lastAverageDb = averageDB;
+            lastAverageDb = fft.finishProcess();
             requestLocation();
-            numberOfFFTs = 0;
-            averageDB = 0;
-
-
             // plot output TODO move and change output
             String dbOutput = "" + MainActivity.this.lastAverageDb;
             adapter.insert(dbOutput,0);
             adapter.notifyDataSetChanged();
-            return DELAY_BETWEEN_MEASUREMENTS_IN_MS;
+            return RecordingConfig.DELAY_BETWEEN_MEASUREMENTS_IN_MS;
         }
+        // TODO
         return 1;
     }
 
@@ -252,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); //TODO
         // Bind to LocalService
         Intent locationIntent = new Intent(this, LocationTrackerService.class);
         bindService(locationIntent, connection, Context.BIND_AUTO_CREATE);
@@ -261,11 +168,9 @@ public class MainActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).registerReceiver(
                 messageReceiver, new IntentFilter("new-location"));
 
-        initCalculations();
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, listItems);
         setContentView(R.layout.activity_main);
         requestQueue = Volley.newRequestQueue(this);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         textMessage = (TextView) findViewById(R.id.message);
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(onNavigationItemSelectedListener);
@@ -325,10 +230,6 @@ public class MainActivity extends AppCompatActivity {
         handler.post(runnable);
     }
 
-    private void initCalculations() {
-        calculateHannWindow();
-        calculateAWeighting();
-    }
     // ----------------------------------------------------------- TEST AREA --------------------------------------------------------
     /**
      * Class for interacting with the main interface of the service.
