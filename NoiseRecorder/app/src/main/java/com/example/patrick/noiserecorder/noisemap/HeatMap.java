@@ -27,18 +27,23 @@ import java.util.List;
 
 
 public class HeatMap {
+    public enum OverlayType {
+        OVERLAY_TILES,
+        OVERLAY_HEATMAP
+    }
 
     //TODO
     final int DIRECTION_NORTHEAST = 45;
     final int DIRECTION_SOUTHEAST = 135;
     final int DIRECTION_SOUTHWEST = 225;
     final int DIRECTION_NORTHWEST = 315;
+    private final GoogleMap map;
+    private final MapsActivity activity;
 
-    public enum OverlayType {
-        OVERLAY_TILES,
-        OVERLAY_HEATMAP
+    public HeatMap(GoogleMap map,MapsActivity activity) {
+        this.map = map;
+        this.activity = activity;
     }
-
     private List<Polygon> polygons = new ArrayList<Polygon>();
     // used to stop the animation of a clicked polygon when another polygon has been clicked
     private Polygon lastClickedPolygon ;
@@ -66,10 +71,8 @@ public class HeatMap {
         return sum/samplesInArea.size();
     }
 
-    public void clusterSamples(LatLng northWestVisible, double offsetLong, double offsetLat, GoogleMap map) {
+    public void clusterSamples(LatLng northWestVisible, double offsetLong, double offsetLat) {
         for(Sample sample: samples) {
-            //map.addMarker(new MarkerOptions().position(sample.position));
-
             // check if value is in visible area
             LatLng curPos = sample.position;
             if(map.getProjection().getVisibleRegion().latLngBounds.contains(curPos)) {
@@ -115,7 +118,7 @@ public class HeatMap {
         }
     }
 
-    public void addPolygonBorderAnimation(final Polygon polygon, final MapsActivity activity) {
+    public void addPolygonBorderAnimation(final Polygon polygon) {
         final long start = SystemClock.uptimeMillis();
         final long animationDurationInMs = 1000;
         final long animationIntervalInMs = 100;
@@ -142,7 +145,7 @@ public class HeatMap {
         });
     }
 
-    public void refresh(GoogleMap map, OverlayType overlayType, final MapsActivity activity) {
+    public void refresh(OverlayType overlayType) {
         map.clear();
         polygons.clear();
 
@@ -159,7 +162,7 @@ public class HeatMap {
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
         double offsetLat =  2 * (start.latitude - northWestVisible.latitude);
 
-        clusterSamples(northWestVisible, offsetLong, offsetLat, map);
+        clusterSamples(northWestVisible, offsetLong, offsetLat);
 
         double lat1 = 52.0382444;
         double long1 = 8.5257916;
@@ -195,7 +198,7 @@ public class HeatMap {
                         normalizedNoise = 1;
                     }
                     double alpha = activity.getAlpha();
-                    Polygon poly = createPolygon(radius, center, meanNoise, normalizedNoise, alpha, map);
+                    Polygon poly = createPolygon(radius, center, meanNoise, normalizedNoise, alpha);
                     polygons.add(poly);
 
                     map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
@@ -207,7 +210,7 @@ public class HeatMap {
                                     .show();
 
                             setLastClickedPolygon(polygon);
-                            addPolygonBorderAnimation(polygon, activity);
+                            addPolygonBorderAnimation(polygon);
                         }
                     });
                 }
@@ -251,7 +254,7 @@ public class HeatMap {
         return fillColor;
     }
     @NonNull
-    private Polygon createPolygon(double radius,LatLng center, double meanNoise, double normalizedNoise,double alpha, GoogleMap map) {
+    private Polygon createPolygon(double radius,LatLng center, double meanNoise, double normalizedNoise,double alpha) {
         Polygon poly;// calculate the center of the current grid tile
 
         // The diagonal length of the tile from the center to an edge (diag) is sqrt(2)*radius
