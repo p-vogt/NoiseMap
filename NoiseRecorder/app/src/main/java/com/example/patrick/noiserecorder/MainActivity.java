@@ -46,15 +46,14 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
+
+    private LocationServiceConnection serviceConnection = new LocationServiceConnection();
     private AudioProcessing fft = new AudioProcessing();
-    private boolean isBound = false;
-    private Messenger service;
     private double lastAverageDb = -1.0d;
     boolean isRecording = false;
     private long timeStartedRecordingInMs;
@@ -101,6 +100,9 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * Starts the audio recorder and sets the record starting time.
+     */
     private void startRecording() {
 
         isRecording = true;
@@ -109,59 +111,91 @@ public class MainActivity extends AppCompatActivity {
         audioRecorder.startRecording();
 
     }
-    private int recordData() {
+
+    /**
+     * Processes one block of audio. Calculates the FFT and
+     * @returns the number of milliseconds until the next recording should occur.
+     */
+    private int processAudioData() {
+
+        // retrieve values from the audio buffer
         short[] valueBuffer = new short[RecordingConfig.BLOCK_SIZE_FFT];
-        int read;
-        read = audioRecorder.read(valueBuffer, 0, RecordingConfig.BLOCK_SIZE_FFT);
-        if(read < 0) {
+        int elementsRead = audioRecorder.read(valueBuffer, 0, RecordingConfig.BLOCK_SIZE_FFT);
+        if(elementsRead < 0) {
             return 1; // TODO
         }
-
+        // process the data
         fft.process(valueBuffer);
         Calendar calendar = Calendar.getInstance();
-        Date curTime = calendar.getTime();
-        long currentRecordingTimeInMs = curTime.getTime() - timeStartedRecordingInMs;
+
+        long currentRecordingTimeInMs = calendar.getTime().getTime() - timeStartedRecordingInMs;
+
         if(currentRecordingTimeInMs >= RecordingConfig.RECORDING_DURATION_IN_MS) {
-            stopRecording();
-            lastAverageDb = fft.finishProcess();
-            requestLocation();
-            // plot output TODO move and change output
-            String dbOutput = "" + MainActivity.this.lastAverageDb;
-            adapter.insert(dbOutput,0);
-            adapter.notifyDataSetChanged();
+            finishMeasurement();
             return RecordingConfig.DELAY_BETWEEN_MEASUREMENTS_IN_MS;
         }
         // TODO
         return 1;
     }
 
+     /**
+     * Finishes one measurement process (multiple FFTs).
+      * Stops recording, calculates the average dBA and triggers a location request.
+      * Also plots the measurement at the gui.
+     */
+    private void finishMeasurement() {
+        stopRecording();
+        lastAverageDb = fft.finishProcess();
+        this.serviceConnection.requestLocation();
+        // plot output TODO move and change output
+        String dbOutput = "" + MainActivity.this.lastAverageDb;
+        adapter.insert(dbOutput,0);
+        adapter.notifyDataSetChanged();
+    }
+
+    /**
+     * Stops the audio recording.
+     */
     private void stopRecording() {
         audioRecorder.stop();
         isRecording = false;
     }
+
+    /**
+     * Returns the last calculated average dBA value.
+     * @return the last calculated average dBA value.
+     */
     public double getLastAverageDb() {
         return lastAverageDb;
     }
+
+    /**
+     * Sends a POST request to the rest api. Adds the sample to the database.
+     * @param sampleBody JSONObject that contains the sample values.
+     */
     public void postNewSample(JSONObject sampleBody) {
 
         //TODO move
         String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
         String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
 
-
         JsonObjectRequest postSample =  createPostSample(sampleBody, POST_SAMPLE_URL);
-        // requestQueue.add(postSample);
-
-        String msgStr = ""; // TODO
-        Log.d("receiver", "Got message: " + msgStr);
+        requestQueue.add(postSample);
     }
+
+    /**
+     *
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); //TODO
         // Bind to LocalService
         Intent locationIntent = new Intent(this, LocationTrackerService.class);
-        bindService(locationIntent, connection, Context.BIND_AUTO_CREATE);
+        bindService(locationIntent, this.serviceConnection, Context.BIND_AUTO_CREATE);
         messageReceiver = new LocationTrackerBroadcastReceiver(this);
         // Register to receive messages.
         LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -195,73 +229,31 @@ public class MainActivity extends AppCompatActivity {
         final ListView lView = findViewById(R.id.lViewPositions);
         lView.setAdapter(adapter);
 
-        //==============TEST==========================================================================================================
         if (audioRecorder.getState() == AudioRecord.STATE_UNINITIALIZED) {
-            Toast.makeText(MainActivity.this, "rec not initialized", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Audio recorder not initialized", Toast.LENGTH_SHORT).show();
             return;
         }
-        //========================================================================================================================
 
-        final Handler handler = new Handler();
+        final Handler recordingHandler = new Handler();
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return;
-                }
-
                 if(!isRecording) {
                     startRecording();
                 }
-                final int delayTimeToNextCall = recordData();
-                handler.postDelayed(this,delayTimeToNextCall);
+                // Recursive call
+                final int delayTimeToNextCall = processAudioData();
+                recordingHandler.postDelayed(this, delayTimeToNextCall);
             }
         };
 
         //Start
-        handler.post(runnable);
+        recordingHandler.post(runnable);
     }
 
     // ----------------------------------------------------------- TEST AREA --------------------------------------------------------
-    /**
-     * Class for interacting with the main interface of the service.
-     */
-    private ServiceConnection connection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            // This is called when the connection with the service has been
-            // established, giving us the object we can use to
-            // interact with the service.  We are communicating with the
-            // service using a Messenger, so here we get a client-side
-            // representation of that from the raw IBinder object.
-            MainActivity.this.service = new Messenger(service);
-            isBound = true;
-        }
 
-        public void onServiceDisconnected(ComponentName className) {
-            // This is called when the connection with the service has been
-            // unexpectedly disconnected -- that is, its process crashed.
-            service = null;
-            isBound = false;
-        }
-    };
 
-    public void requestLocation() {
-        if (!isBound) return;
-        // send request location message to the LocationTrackerService
-        Message msg = Message.obtain(null, LocationTrackerService.MSG_REQUEST_LOCATION, 0, 0);
-        try {
-            service.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace(); // TODO
-        }
-    }
 
     // TODO extra class ?
 
