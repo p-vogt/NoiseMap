@@ -77,7 +77,7 @@ public final class RestCallFactory {
         };
     }
 
-    public static JsonObjectRequest createPostSample(JSONObject jsonBody, String url, final String accessToken) {
+    public static JsonObjectRequest createPostSampleRequest(JSONObject jsonBody, String url, final String accessToken) {
         return new JsonObjectRequest(url, jsonBody,
                 new Response.Listener<JSONObject>() {
                     @Override
@@ -103,7 +103,7 @@ public final class RestCallFactory {
         }) {
             @Override
             public Map<String, String> getHeaders() {
-                HashMap<String, String> headers = new HashMap<String, String>();
+                HashMap<String, String> headers = new HashMap<>();
                 headers.put("Authorization", "Bearer " + accessToken);
                 return headers;
             }

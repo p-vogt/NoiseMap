@@ -29,9 +29,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
 
-
-
-
     private static final String TAG = "MainActivity";
     final ArrayList<String> listItems = new ArrayList<>();
     ArrayAdapter<String> adapter;
@@ -97,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
         String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
         String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
 
-        JsonObjectRequest postSample = RestCallFactory.createPostSample(sampleBody, POST_SAMPLE_URL, this.accessToken);
+        JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
         requestQueue.add(postSample);
     }
 
