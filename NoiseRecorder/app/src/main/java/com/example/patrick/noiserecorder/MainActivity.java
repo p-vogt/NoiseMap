@@ -20,9 +20,9 @@ import android.widget.TextView;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-import com.example.patrick.noiserecorder.AudioProcessing.AudioRecorder;
-import com.example.patrick.noiserecorder.Location.LocationTrackerBroadcastReceiver;
-import com.example.patrick.noiserecorder.Network.RestCallFactory;
+import com.example.patrick.noiserecorder.audioprocessing.AudioRecorder;
+import com.example.patrick.noiserecorder.location.LocationTrackerBroadcastReceiver;
+import com.example.patrick.noiserecorder.network.RestCallFactory;
 
 import org.json.JSONObject;
 

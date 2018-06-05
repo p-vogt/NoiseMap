@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder.AudioProcessing;
+package com.example.patrick.noiserecorder.audioprocessing;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;

@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder.AudioProcessing;
+package com.example.patrick.noiserecorder.audioprocessing;
 import org.jtransforms.fft.DoubleFFT_1D;
 
 

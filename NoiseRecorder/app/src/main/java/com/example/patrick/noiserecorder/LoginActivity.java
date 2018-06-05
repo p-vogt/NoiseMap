@@ -18,7 +18,6 @@ import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -30,34 +29,21 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
-import com.android.volley.NetworkError;
-import com.android.volley.NoConnectionError;
-import com.android.volley.ParseError;
 import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.ServerError;
-import com.android.volley.TimeoutError;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.example.patrick.noiserecorder.Network.RestCallFactory;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.example.patrick.noiserecorder.network.RestCallFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A login screen that offers login via username/password.
  */
 public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor> {
+    private final static int ACCESS_LOCATION_AND_RECORD_AUDIO_REQUEST_CODE = 1;
     /**
      * Keep track of the login task to ensure we can cancel it if requested.
      */
@@ -67,8 +53,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private AutoCompleteTextView usernameView;
     private EditText passwordView;
     private EditText confirmPasswordView;
-    private View mProgressView;
-    private View mLoginFormView;
+    private View progressView;
+    private View loginFormView;
     private String accessToken;
 
     private RequestQueue requestQueue;
@@ -77,7 +63,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         requestQueue = Volley.newRequestQueue(this);
-        ActivityCompat.requestPermissions(LoginActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.RECORD_AUDIO}, 1); // 1 is a integer which will return the result in onRequestPermissionsResult
+        ActivityCompat.requestPermissions(LoginActivity.this,
+                            new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                         Manifest.permission.RECORD_AUDIO},
+                            ACCESS_LOCATION_AND_RECORD_AUDIO_REQUEST_CODE);
 
         // Set up the login form.
         usernameView = (AutoCompleteTextView) findViewById(R.id.email);
@@ -96,9 +85,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         });
 
         // load user data
-        SharedPreferences settings = getSharedPreferences("UserData", 0);
-        usernameView.setText(settings.getString("Username", "").toString());
-        passwordView.setText(settings.getString("Password", "").toString());
+        loadUserData();
 
         final Button btnSignIn = (Button) findViewById(R.id.btn_SignIn);
         final Button btnRegister = (Button) findViewById(R.id.btn_register);
@@ -120,19 +107,25 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             }
         });
 
-        mLoginFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
+        loginFormView = findViewById(R.id.login_form);
+        progressView = findViewById(R.id.login_progress);
     }
+
+    private void loadUserData() {
+        SharedPreferences settings = getSharedPreferences("UserData", 0);
+        usernameView.setText(settings.getString("Username", "").toString());
+        passwordView.setText(settings.getString("Password", "").toString());
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 
         switch (requestCode) {
-            case 1:
+            case ACCESS_LOCATION_AND_RECORD_AUDIO_REQUEST_CODE:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                    // permission granted
-
                 } else {
-                    Toast.makeText(this,"App needs this permission to work!",Toast.LENGTH_LONG).show();
+                    Toast.makeText(this,"App needs those permissions to work!",Toast.LENGTH_LONG).show();
                     finish();
                 }
                 break;
@@ -272,28 +265,28 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
             int shortAnimTime = getResources().getInteger(android.R.integer.config_shortAnimTime);
 
-            mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
-            mLoginFormView.animate().setDuration(shortAnimTime).alpha(
+            loginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
+            loginFormView.animate().setDuration(shortAnimTime).alpha(
                     show ? 0 : 1).setListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
+                    loginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
                 }
             });
 
-            mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
-            mProgressView.animate().setDuration(shortAnimTime).alpha(
+            progressView.setVisibility(show ? View.VISIBLE : View.GONE);
+            progressView.animate().setDuration(shortAnimTime).alpha(
                     show ? 1 : 0).setListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
+                    progressView.setVisibility(show ? View.VISIBLE : View.GONE);
                 }
             });
         } else {
             // The ViewPropertyAnimator APIs are not available, so simply show
             // and hide the relevant UI components.
-            mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
-            mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
+            progressView.setVisibility(show ? View.VISIBLE : View.GONE);
+            loginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
         }
     }
 
@@ -350,7 +343,12 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         int ADDRESS = 0;
         int IS_PRIMARY = 1;
     }
-
+    private void enableButtons() {
+        final Button btnSignIn = (Button) findViewById(R.id.btn_SignIn);
+        final Button btnRegister = (Button) findViewById(R.id.btn_register);
+        btnSignIn.setEnabled(true);
+        btnRegister.setEnabled(true);
+    }
     /**
      * Represents an asynchronous login task used to authenticate the user.
      */
@@ -426,7 +424,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
             JsonRequest registerUserRequest = null;
             try {
-                registerUserRequest = createRegisterUserRequest(username,password,confirmPassword,TOKEN_URL);
+                registerUserRequest = RestCallFactory.createRegisterUserRequest(username, password, confirmPassword, TOKEN_URL, LoginActivity.this);
             } catch (IllegalAccessException e) {
                 e.printStackTrace(); // username, password or confirmationPassword == null
             }
@@ -463,116 +461,5 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             enableButtons();
         }
     }
-    private JsonObjectRequest createRegisterUserRequest(final String username, final String password, final String confirmPassword, String url) throws IllegalAccessException {
-
-        if(username == null) throw new IllegalAccessException("username");
-        if(password == null) throw new IllegalAccessException("password");
-        if(confirmPassword == null) throw new IllegalAccessException("confirmPassword");
-
-        JSONObject jsonBody = new JSONObject(); // TODO
-        try {
-            jsonBody.put("username", username);
-            jsonBody.put("password", password);
-            jsonBody.put("confirmPassword", confirmPassword);
-        } catch (JSONException ex) {
-            // can not happen
-        }
-
-        return new JsonObjectRequest(url, jsonBody,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                            // TODO login user?
-                        showProgress(false);
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                String msg = "";
-                JSONObject obj;
-                String errorMsg = "unknown error";
-                boolean gotJsonResponse = false;
-                try {
-                    if(error != null && error.networkResponse != null && error.networkResponse.data != null) {
-                        msg = new String(error.networkResponse.data, "UTF-8");
-                        obj = new JSONObject(msg);
-                        if(obj.has("error_description")) {
-                            errorMsg = obj.getString("error_description");
-                            gotJsonResponse = true;
-                        } else if(obj.has("modelState")) {
-                            obj = obj.getJSONObject("modelState");
-                            if(obj.has("")) {
-                                errorMsg = obj.getString("");
-                            } else {
-                                errorMsg = obj.toString();
-                            }
-                            gotJsonResponse = true;
-                        }
-                    }
-                } catch (Exception e) {
-                    if(e.getStackTrace() != null) {
-                        Log.e(this.getClass().getName(), e.getStackTrace().toString());
-                    }
-                    else {
-                        Log.e(this.getClass().getName(), e.getMessage());
-                    }
-                }
-                if(!gotJsonResponse) {
-                    if (error instanceof NetworkError) {
-                        Toast.makeText(LoginActivity.this,
-                                "Network error.",
-                                Toast.LENGTH_LONG).show();
-                    } else if (error instanceof ServerError) {
-                        Toast.makeText(LoginActivity.this,
-                                "Server responded with an error.",
-                                Toast.LENGTH_LONG).show();
-                    } else if (error instanceof AuthFailureError) {
-                        Toast.makeText(LoginActivity.this,
-                                "Authentication failed.",
-                                Toast.LENGTH_LONG).show();
-                    } else if (error instanceof ParseError) {
-                        Toast.makeText(LoginActivity.this,
-                                "Servers response could not be parsed.",
-                                Toast.LENGTH_LONG).show();
-                    } else if (error instanceof NoConnectionError) {
-                        Toast.makeText(LoginActivity.this,
-                                "Connection could not be established.",
-                                Toast.LENGTH_LONG).show();
-                    } else if (error instanceof TimeoutError) {
-                        Toast.makeText(LoginActivity.this,
-                                "Timeout error. Please try again.",
-                                Toast.LENGTH_LONG).show();
-                    }
-                }
-                showProgress(false);
-                Toast.makeText(LoginActivity.this, //TODO
-                        errorMsg,
-                        Toast.LENGTH_LONG).show();
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
-                Map<String, String> params = new HashMap<>();
-                params.put("grant_type", "password");
-                params.put("username", username);
-                params.put("password", password);
-                params.put("confirmPassword", confirmPassword);
-                return params;
-            }
-
-            @Override
-            public String getBodyContentType()
-            {
-                return "application/json; charset=utf-8";
-            }
-        };
-    }
-    private void enableButtons() {
-        final Button btnSignIn = (Button) findViewById(R.id.btn_SignIn);
-        final Button btnRegister = (Button) findViewById(R.id.btn_register);
-        btnSignIn.setEnabled(true);
-        btnRegister.setEnabled(true);
-    }
-
 }
 

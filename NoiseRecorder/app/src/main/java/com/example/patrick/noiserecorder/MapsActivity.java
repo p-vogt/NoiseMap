@@ -19,6 +19,8 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import com.example.patrick.noiserecorder.noisemap.HeatMap;
+import com.example.patrick.noiserecorder.noisemap.Sample;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -39,17 +41,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-//TODO
-class Sample {
-    public LatLng position;
-    public double noise;
-
-    public Sample(LatLng position, double noise) {
-        this.position = position;
-        this.noise = noise;
-
-    }
-}
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLoadedCallback, GoogleMap.OnCameraIdleListener {
 
     final int DIRECTION_NORTHEAST = 45;
@@ -85,7 +76,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private List<Sample> samples = new ArrayList<>();
     private List<Polygon> polygons = new ArrayList<Polygon>();
-
+    private HeatMap heatmap = new HeatMap();
     private Switch switchGrid;
     private SeekBar seekbarAlpha;
     private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
@@ -93,15 +84,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private enum MapOverlayType {
         OVERLAY_TILES,
         OVERLAY_HEATMAP
-    }
-
-    // used to stop the animation of a clicked polygon when another polygon has been clicked
-    private Polygon lastClickedPolygon ;
-    private void setLastClickedPolygon(Polygon poly) {
-        lastClickedPolygon = poly;
-    };
-    private Polygon getLastClickedPolygon() {
-        return lastClickedPolygon;
     }
 
     private MapOverlayType overlayType = MapOverlayType.OVERLAY_TILES;
@@ -226,9 +208,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         for(Polygon poly : polygons) {
             int curColor = poly.getFillColor();
             if(curColor != 0) {
-                curColor = curColor & 0x00ffffff;
-
-                poly.setFillColor((int)(alpha * 255) << 24 | curColor);
+                curColor = HeatMap.applyAlphaToColor(alpha, curColor);
+                poly.setFillColor(curColor);
             }
 
         }
@@ -251,108 +232,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.clear();
         noiseMatrix.clear();
         polygons.clear();
+
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
         LatLng northWestVisible = new LatLng(northEastVisible.latitude,southWestVisible.longitude);
-        double NUM_OF_RECTS_WIDTH = 20;
+        double NUM_OF_RECTS_WIDTH = 20; // TODO configurable
 
         double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / NUM_OF_RECTS_WIDTH / 2;
         double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / radius / 2;
-        //map.addMarker(new MarkerOptions().position(start));
         LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
 
-        // init matrix
-        for(int i = 0; i < numOfRectsHeight; i++) {
-            List<List<Double>> row = new ArrayList<>();
-            for(int j = 0; j < NUM_OF_RECTS_WIDTH;j++) {
-                List<Double> column = new ArrayList<>();
-                row.add(column);
-            }
-            noiseMatrix.add(row);
-        }
-
-        //map.addMarker(new MarkerOptions().position(start));
+        initMatrix(NUM_OF_RECTS_WIDTH, numOfRectsHeight);
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
         double offsetLat =  2 * (start.latitude - northWestVisible.latitude);
 
-        // cluster the samples samples
-        for(Sample sample: samples) {
-            //map.addMarker(new MarkerOptions().position(sample.position));
-
-            // check if value is in visible area
-            LatLng curPos = sample.position;
-            if(map.getProjection().getVisibleRegion().latLngBounds.contains(curPos)) {
-                // calculate matrix indices
-                // Index = floor[(Value-FirstPositionValue)/offset]
-                int i = (int) Math.floor((curPos.latitude-northWestVisible.latitude)/offsetLat);
-                int j = (int) Math.floor((curPos.longitude-northWestVisible.longitude)/offsetLong);
-                noiseMatrix.get(i).get(j).add(sample.noise);
-
-            }
-        }
-
-
+        clusterSamples(northWestVisible, offsetLong, offsetLat);
 
         double lat1 = 52.0382444;
         double long1 = 8.5257916;
-        Polygon poly = null;
-
         LatLng bielefeld1 = new LatLng(lat1, long1);
 
         LatLng bielefeld2 = new LatLng(52.0392444, 8.5257916);
 
         Collection<WeightedLatLng> weightedSamples = new ArrayList<>();
 
-        boolean showGrid = switchGrid.isChecked();
+        // run through the whole map grid (vertically)
+        //  ^
+        //  |
+        //  v
         for(int heightCounter = 0; heightCounter < numOfRectsHeight; heightCounter++) {
+            // run through the whole map grid (horizontally)
+            //
+            // <--->
+            //
             for(int widthCounter = 0; widthCounter < NUM_OF_RECTS_WIDTH; widthCounter++) {
 
+                double meanNoise = getMeanNoise(heightCounter, widthCounter);
+
                 LatLng center = new LatLng(start.latitude + heightCounter*offsetLat,start.longitude+widthCounter*offsetLong);
-
-                LatLng targetNorthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHEAST);
-                LatLng targetNorthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
-                LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHWEST);
-                LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHWEST);
-
-                double sum = 0.0;
-                List<Double> samplesInArea = noiseMatrix.get(heightCounter).get(widthCounter);
-                for (double curValue : samplesInArea) {
-                    sum += curValue;
-                }
-
-                double meanNoise = sum/samplesInArea.size();
-                int fillColor = 0;
-
                 //TODO customizable range
-                double normalizedNoise = (meanNoise-30)*75/ 25.0d / 100.0d;
-                if(normalizedNoise > 1) {
-                    normalizedNoise = 1;
-                }
+                double normalizedNoise = (meanNoise - 30) * 75 / 25.0d / 100.0d;
                 if(meanNoise > 0.0) {
-
-                    fillColor = getArgbColor(normalizedNoise, seekbarAlpha.getProgress()/100.0d);
                     weightedSamples.add(new WeightedLatLng(center, normalizedNoise));
                 }
+                // Draw tiles if the tiles overlay is selected
                 if(overlayType == MapOverlayType.OVERLAY_TILES) {
-                    PolygonOptions rectOptions = new PolygonOptions()
-                            .add(targetSouthWest)
-                            .add(targetSouthEast)
-                            .add(targetNorthEast)
-                            .add(targetNorthWest)
-                            .fillColor(fillColor)
-                            .strokeWidth(0f);
-                    if(showGrid) {
-                        rectOptions.strokeWidth(1.0f);
+
+                    if(normalizedNoise > 1) {
+                        normalizedNoise = 1;
                     }
-                    poly = map.addPolygon(rectOptions);
-                    if(meanNoise > 0d) {
-                        poly.setTag(String.format("%.2f",  meanNoise) + " db(A)");
-                        poly.setClickable(true);
-                    } else {
-                        if(!showGrid) {
-                            poly.setVisible(false);
-                        }
-                    }
+                    Polygon poly = createPolygon(radius, center, meanNoise, normalizedNoise);
                     polygons.add(poly);
 
                     map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
@@ -363,39 +292,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     Toast.LENGTH_LONG)
                                     .show();
 
-                            MapsActivity.this.setLastClickedPolygon(polygon);
+                            heatmap.setLastClickedPolygon(polygon);
                             // add animation (show border)
-                            final long start = SystemClock.uptimeMillis();
-                            final long animationDurationInMs = 1000;
-                            final long animationIntervalInMs = 100;
-                            final Handler handler = new Handler();
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    long elapsed = SystemClock.uptimeMillis() - start;
-                                    boolean hasTimeElapsed = elapsed >= animationDurationInMs;
-
-                                    //toggle visibility
-                                    polygon.setVisible(!polygon.isVisible());
-
-                                    boolean hasAnotherPolygonBeenClicked = MapsActivity.this.getLastClickedPolygon() != polygon;
-
-                                    if (hasTimeElapsed || hasAnotherPolygonBeenClicked) {
-                                        // animation stopped
-                                        polygon.setVisible(true);
-                                    } else {
-                                        // call again (delayed)
-                                        handler.postDelayed(this, animationIntervalInMs);
-                                    }
-                                }
-                            });
+                            heatmap.addPolygonBorderAnimation(polygon, MapsActivity.this);
                         }
                     });
                 }
-
             }
         }
-
 
         if(overlayType == MapOverlayType.OVERLAY_HEATMAP) {
             HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
@@ -412,6 +316,77 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
         }
+    }
+
+    @NonNull
+    private Polygon createPolygon(double radius,LatLng center, double meanNoise, double normalizedNoise) {
+        Polygon poly;// calculate the center of the current grid tile
+
+        // The diagonal length of the tile from the center to an edge (diag) is sqrt(2)*radius
+        // since r^2 + r^2 = diag^2
+        LatLng targetNorthWest = createPolygon(radius, center);
+        LatLng targetNorthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHEAST);
+        LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHWEST);
+        LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
+        int fillColor = 0;
+        if(meanNoise > 0.0) {
+            fillColor = getArgbColor(normalizedNoise, seekbarAlpha.getProgress()/100.0d);
+        }
+        PolygonOptions rectOptions = new PolygonOptions()
+                .add(targetSouthWest)
+                .add(targetSouthEast)
+                .add(targetNorthEast)
+                .add(targetNorthWest)
+                .fillColor(fillColor)
+                .strokeWidth(0f); // the width gets set later, depending on whether the grid is on or off
+        poly = map.addPolygon(rectOptions);
+        if(meanNoise > 0d) {
+            poly.setTag(String.format("%.2f",  meanNoise) + " db(A)");
+            poly.setClickable(true);
+        }
+        return poly;
+    }
+
+    @NonNull
+    private LatLng createPolygon(double radius, LatLng center) {
+        return SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHWEST);
+    }
+
+    private void initMatrix(double NUM_OF_RECTS_WIDTH, double numOfRectsHeight) {
+        for(int i = 0; i < numOfRectsHeight; i++) {
+            List<List<Double>> row = new ArrayList<>();
+            for(int j = 0; j < NUM_OF_RECTS_WIDTH;j++) {
+                List<Double> column = new ArrayList<>();
+                row.add(column);
+            }
+            noiseMatrix.add(row);
+        }
+    }
+
+    private void clusterSamples(LatLng northWestVisible, double offsetLong, double offsetLat) {
+        for(Sample sample: samples) {
+            //map.addMarker(new MarkerOptions().position(sample.position));
+
+            // check if value is in visible area
+            LatLng curPos = sample.position;
+            if(map.getProjection().getVisibleRegion().latLngBounds.contains(curPos)) {
+                // calculate matrix indices
+                // Index = floor[(Value-FirstPositionValue)/offset]
+                int i = (int) Math.floor((curPos.latitude-northWestVisible.latitude)/offsetLat);
+                int j = (int) Math.floor((curPos.longitude-northWestVisible.longitude)/offsetLong);
+                noiseMatrix.get(i).get(j).add(sample.noise);
+
+            }
+        }
+    }
+
+    private double getMeanNoise(int heightCounter, int widthCounter) {
+        double sum = 0.0d;
+        List<Double> samplesInArea = noiseMatrix.get(heightCounter).get(widthCounter);
+        for (double curValue : samplesInArea) {
+            sum += curValue;
+        }
+        return sum/samplesInArea.size();
     }
 
     private int getArgbColor(double normalizedValue, double alpha) {

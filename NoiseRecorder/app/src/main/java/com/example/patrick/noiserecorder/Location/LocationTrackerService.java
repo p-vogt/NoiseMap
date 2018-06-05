@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder.Location;
+package com.example.patrick.noiserecorder.location;
 
 import android.Manifest;
 import android.app.Service;

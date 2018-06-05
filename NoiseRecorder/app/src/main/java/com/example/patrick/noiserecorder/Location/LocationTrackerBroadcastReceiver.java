@@ -1,10 +1,10 @@
-package com.example.patrick.noiserecorder.Location;
+package com.example.patrick.noiserecorder.location;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import com.example.patrick.noiserecorder.AudioProcessing.AudioRecorder;
+import com.example.patrick.noiserecorder.audioprocessing.AudioRecorder;
 import com.example.patrick.noiserecorder.MainActivity;
 
 import org.json.JSONException;

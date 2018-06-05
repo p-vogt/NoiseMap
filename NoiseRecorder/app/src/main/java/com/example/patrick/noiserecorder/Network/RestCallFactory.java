@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder.Network;
+package com.example.patrick.noiserecorder.network;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -213,4 +213,110 @@ public final class RestCallFactory {
             }
         };
     }
+
+    public static JsonObjectRequest createRegisterUserRequest(final String username, final String password, final String confirmPassword,final String url, final LoginActivity activity) throws IllegalAccessException {
+
+        if(username == null) throw new IllegalAccessException("username");
+        if(password == null) throw new IllegalAccessException("password");
+        if(confirmPassword == null) throw new IllegalAccessException("confirmPassword");
+
+        JSONObject jsonBody = new JSONObject(); // TODO
+        try {
+            jsonBody.put("username", username);
+            jsonBody.put("password", password);
+            jsonBody.put("confirmPassword", confirmPassword);
+        } catch (JSONException ex) {
+            // can not happen
+        }
+
+        return new JsonObjectRequest(url, jsonBody,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        // TODO login user?
+                        activity.showProgress(false);
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                String msg = "";
+                JSONObject obj;
+                String errorMsg = "unknown error";
+                boolean gotJsonResponse = false;
+                try {
+                    if(error != null && error.networkResponse != null && error.networkResponse.data != null) {
+                        msg = new String(error.networkResponse.data, "UTF-8");
+                        obj = new JSONObject(msg);
+                        if(obj.has("error_description")) {
+                            errorMsg = obj.getString("error_description");
+                            gotJsonResponse = true;
+                        } else if(obj.has("modelState")) {
+                            obj = obj.getJSONObject("modelState");
+                            if(obj.has("")) {
+                                errorMsg = obj.getString("");
+                            } else {
+                                errorMsg = obj.toString();
+                            }
+                            gotJsonResponse = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    if(e.getStackTrace() != null) {
+                        Log.e(this.getClass().getName(), e.getStackTrace().toString());
+                    }
+                    else {
+                        Log.e(this.getClass().getName(), e.getMessage());
+                    }
+                }
+                if(!gotJsonResponse) {
+                    if (error instanceof NetworkError) {
+                        Toast.makeText(activity,
+                                "Network error.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof ServerError) {
+                        Toast.makeText(activity,
+                                "Server responded with an error.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof AuthFailureError) {
+                        Toast.makeText(activity,
+                                "Authentication failed.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof ParseError) {
+                        Toast.makeText(activity,
+                                "Servers response could not be parsed.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof NoConnectionError) {
+                        Toast.makeText(activity,
+                                "Connection could not be established.",
+                                Toast.LENGTH_LONG).show();
+                    } else if (error instanceof TimeoutError) {
+                        Toast.makeText(activity,
+                                "Timeout error. Please try again.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+                activity.showProgress(false);
+                Toast.makeText(activity, //TODO
+                        errorMsg,
+                        Toast.LENGTH_LONG).show();
+            }
+        }) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("grant_type", "password");
+                params.put("username", username);
+                params.put("password", password);
+                params.put("confirmPassword", confirmPassword);
+                return params;
+            }
+
+            @Override
+            public String getBodyContentType()
+            {
+                return "application/json; charset=utf-8";
+            }
+        };
+    }
+
 }
