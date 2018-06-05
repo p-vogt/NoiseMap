@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import com.example.patrick.noiserecorder.AudioProcessing.AudioRecorder;
 import com.example.patrick.noiserecorder.MainActivity;
 
 import org.json.JSONException;
@@ -14,15 +15,17 @@ import java.util.Calendar;
 
 public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
 
-    MainActivity activity;
-    public LocationTrackerBroadcastReceiver(MainActivity activity) {
-        this.activity = activity;
+    AudioRecorder recording;
+    MainActivity callingActivity;
+    public LocationTrackerBroadcastReceiver(MainActivity callingActivity, AudioRecorder recording) {
+        this.recording = recording;
+        this.callingActivity = callingActivity;
     }
     @Override
     public void onReceive(Context context, Intent intent) {
 
         JSONObject jsonBody = getJSONLocationMessageFromIntent(intent);
-        activity.postNewSample(jsonBody);
+        callingActivity.postNewSample(jsonBody);
     }
 
     private JSONObject getJSONLocationMessageFromIntent(Intent intent) {
@@ -41,7 +44,7 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
         JSONObject jsonBody = new JSONObject();
         try {
             jsonBody.put("timestamp", timestamp);
-            jsonBody.put("noiseValue", activity.getLastAverageDb());
+            jsonBody.put("noiseValue", this.recording.getLastAverageDb());
             jsonBody.put("longitude", message.getDouble("longitude"));
             jsonBody.put("latitude", message.getDouble("latitude"));
             jsonBody.put("accuracy", message.getDouble("accuracy"));

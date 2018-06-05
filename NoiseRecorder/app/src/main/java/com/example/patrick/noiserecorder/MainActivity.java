@@ -1,13 +1,10 @@
 package com.example.patrick.noiserecorder;
 
 import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
-import android.media.AudioRecord;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.content.LocalBroadcastManager;
@@ -19,7 +16,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -28,11 +24,8 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.example.patrick.noiserecorder.AudioProcessing.AudioProcessing;
-import com.example.patrick.noiserecorder.AudioProcessing.RecordingConfig;
-import com.example.patrick.noiserecorder.Location.LocationServiceConnection;
+import com.example.patrick.noiserecorder.AudioProcessing.AudioRecorder;
 import com.example.patrick.noiserecorder.Location.LocationTrackerBroadcastReceiver;
-import com.example.patrick.noiserecorder.Location.LocationTrackerService;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -40,31 +33,18 @@ import org.json.JSONObject;
 
 
 import java.io.UnsupportedEncodingException;
-import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
 
-    private LocationServiceConnection serviceConnection = new LocationServiceConnection();
-    private AudioProcessing fft = new AudioProcessing();
-    private double lastAverageDb = -1.0d;
-    boolean isRecording = false;
-    private long timeStartedRecordingInMs;
-
-    AudioRecord audioRecorder = new AudioRecord(
-                                        RecordingConfig.AUDIO_SOURCE,
-                                        RecordingConfig.SAMPLE_RATE_IN_HZ,
-                                        RecordingConfig.CHANNEL_CONFIG,
-                                        RecordingConfig.AUDIO_FORMAT,
-                                        RecordingConfig.BUFFER_SIZE_IN_BYTES);
 
 
     private static final String TAG = "MainActivity";
     final ArrayList<String> listItems = new ArrayList<>();
     ArrayAdapter<String> adapter;
-
+    private AudioRecorder audioRecorder;
     private TextView textMessage;
     private String accessToken;
     private RequestQueue requestQueue;
@@ -95,73 +75,15 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    /**
-     * Starts the audio recorder and sets the record starting time.
-     */
-    private void startRecording() {
 
-        isRecording = true;
-        Calendar calendar = Calendar.getInstance();
-        timeStartedRecordingInMs = calendar.getTimeInMillis();
-        audioRecorder.startRecording();
 
-    }
 
-    /**
-     * Processes one block of audio. Calculates the FFT and
-     * @returns the number of milliseconds until the next recording should occur.
-     */
-    private int processAudioData() {
 
-        // retrieve values from the audio buffer
-        short[] valueBuffer = new short[RecordingConfig.BLOCK_SIZE_FFT];
-        int elementsRead = audioRecorder.read(valueBuffer, 0, RecordingConfig.BLOCK_SIZE_FFT);
-        if(elementsRead < 0) {
-            return 1; // TODO
-        }
-        // process the data
-        fft.process(valueBuffer);
-        Calendar calendar = Calendar.getInstance();
-
-        long currentRecordingTimeInMs = calendar.getTime().getTime() - timeStartedRecordingInMs;
-
-        if(currentRecordingTimeInMs >= RecordingConfig.RECORDING_DURATION_IN_MS) {
-            finishMeasurement();
-            return RecordingConfig.DELAY_BETWEEN_MEASUREMENTS_IN_MS;
-        }
-        // TODO
-        return 1;
-    }
-
-     /**
-     * Finishes one measurement process (multiple FFTs).
-      * Stops recording, calculates the average dBA and triggers a location request.
-      * Also plots the measurement at the gui.
-     */
-    private void finishMeasurement() {
-        stopRecording();
-        lastAverageDb = fft.finishProcess();
-        this.serviceConnection.requestLocation();
+    public void onNewMeasurementDone(double newMeanDBA) {
         // plot output TODO move and change output
-        String dbOutput = "" + MainActivity.this.lastAverageDb;
+        String dbOutput = "" + newMeanDBA;
         adapter.insert(dbOutput,0);
         adapter.notifyDataSetChanged();
-    }
-
-    /**
-     * Stops the audio recording.
-     */
-    private void stopRecording() {
-        audioRecorder.stop();
-        isRecording = false;
-    }
-
-    /**
-     * Returns the last calculated average dBA value.
-     * @return the last calculated average dBA value.
-     */
-    public double getLastAverageDb() {
-        return lastAverageDb;
     }
 
     /**
@@ -188,10 +110,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); //TODO
-        // Bind to LocalService
-        Intent locationIntent = new Intent(this, LocationTrackerService.class);
-        bindService(locationIntent, this.serviceConnection, Context.BIND_AUTO_CREATE);
-        messageReceiver = new LocationTrackerBroadcastReceiver(this);
+        audioRecorder = new AudioRecorder(this);
+        messageReceiver = new LocationTrackerBroadcastReceiver(this, audioRecorder);
         // Register to receive messages.
         LocalBroadcastManager.getInstance(this).registerReceiver(
                 messageReceiver, new IntentFilter("new-location"));
@@ -224,26 +144,7 @@ public class MainActivity extends AppCompatActivity {
         final ListView lView = findViewById(R.id.lViewPositions);
         lView.setAdapter(adapter);
 
-        if (audioRecorder.getState() == AudioRecord.STATE_UNINITIALIZED) {
-            Toast.makeText(MainActivity.this, "Audio recorder not initialized", Toast.LENGTH_SHORT).show();
-            return;
-        }
 
-        final Handler recordingHandler = new Handler();
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                if(!isRecording) {
-                    startRecording();
-                }
-                // Recursive call
-                final int delayTimeToNextCall = processAudioData();
-                recordingHandler.postDelayed(this, delayTimeToNextCall);
-            }
-        };
-
-        //Start
-        recordingHandler.post(runnable);
     }
 
     // ----------------------------------------------------------- TEST AREA --------------------------------------------------------
