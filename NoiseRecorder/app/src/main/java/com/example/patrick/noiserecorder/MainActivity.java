@@ -26,6 +26,7 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.patrick.noiserecorder.AudioProcessing.AudioRecorder;
 import com.example.patrick.noiserecorder.Location.LocationTrackerBroadcastReceiver;
+import com.example.patrick.noiserecorder.Network.RestCallFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -53,20 +54,30 @@ public class MainActivity extends AppCompatActivity {
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
+        /**
+         * Gets called when an item of the navigation bar gets clicked.
+         * Opens the corresponding "page".
+         * @param item The clicked menu item.
+         * @return whether the item was valid or not.
+         */
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
                 case R.id.navigation_home:
                     textMessage.setText(R.string.title_home);
                     return true;
+
+                // open the navigation map
                 case R.id.navigation_map:
                     Bundle b = new Bundle();
-                    textMessage.setText(R.string.title_dashboard);
+                    // pass the accessToken to the new MapActivity
                     Intent intent = new Intent(MainActivity.this, MapsActivity.class);
                     b.putString("accessToken", accessToken);
                     intent.putExtras(b);
+
                     startActivity(intent);
                     return true;
+
                 case R.id.navigation_notifications:
                     textMessage.setText(R.string.title_notifications);
                     return true;
@@ -75,10 +86,10 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
-
-
-
+    /**
+     * Gets called by the AudioRecorder when a whole measurement finished.
+     * @param newMeanDBA Mean value of the noise in dBA.
+     */
     public void onNewMeasurementDone(double newMeanDBA) {
         // plot output TODO move and change output
         String dbOutput = "" + newMeanDBA;
@@ -96,39 +107,33 @@ public class MainActivity extends AppCompatActivity {
         String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
         String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
 
-        JsonObjectRequest postSample =  createPostSample(sampleBody, POST_SAMPLE_URL);
+        JsonObjectRequest postSample = RestCallFactory.createPostSample(sampleBody, POST_SAMPLE_URL, this.accessToken);
         requestQueue.add(postSample);
     }
 
-    /**
-     *
-     * @param savedInstanceState
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); //TODO
-        audioRecorder = new AudioRecorder(this);
-        messageReceiver = new LocationTrackerBroadcastReceiver(this, audioRecorder);
-        // Register to receive messages.
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-                messageReceiver, new IntentFilter("new-location"));
-
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, listItems);
         setContentView(R.layout.activity_main);
-        requestQueue = Volley.newRequestQueue(this);
-        textMessage = (TextView) findViewById(R.id.message);
-        BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
-        navigation.setOnNavigationItemSelectedListener(onNavigationItemSelectedListener);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); //TODO
 
         Bundle b = getIntent().getExtras();
         if (b != null) {
             accessToken = b.getString("accessToken");
+        } else {
+            //TODO
+            return;
         }
-        final Button btnStartStop = findViewById(R.id.btnStartStop);
 
+        initServices();
+        requestQueue = Volley.newRequestQueue(this);
+        textMessage = (TextView) findViewById(R.id.message);
+
+        BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
+        navigation.setOnNavigationItemSelectedListener(onNavigationItemSelectedListener);
+
+        final Button btnStartStop = findViewById(R.id.btnStartStop);
         btnStartStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -141,101 +146,19 @@ public class MainActivity extends AppCompatActivity {
                 btnStartStop.setBackgroundColor(btnStartStop.getText() == "Start" ? Color.parseColor("#33cc33") : Color.parseColor("#cc0000"));
             }
         });
+
+        // Connect the adapter with the ListView
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, listItems);
         final ListView lView = findViewById(R.id.lViewPositions);
         lView.setAdapter(adapter);
-
-
     }
 
-    // ----------------------------------------------------------- TEST AREA --------------------------------------------------------
-
-
-
-    // TODO extra class ?
-
-    private StringRequest createGetRequest(final String url, final String accessToken) {
-        return new StringRequest(Request.Method.GET, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        JSONArray resp;
-                        try {
-                            resp = new JSONArray(response);
-                            int i = 0;
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            // TODO invalid response
-                        }
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                // TODO this is a dummy from LoginActivity
-                String msg = "";
-                JSONObject obj;
-                String errorMsg = "unbekannter Fehler";
-                try {
-                    if(error != null && error.networkResponse != null) {
-                        msg = new String(error.networkResponse.data, "UTF-8");
-                        obj = new JSONObject(msg);
-                        errorMsg = obj.getString("error_description");
-                    }
-                    // TODO
-                } catch (UnsupportedEncodingException | JSONException e) {
-                    e.printStackTrace(); //TODO
-                    return;
-
-                }
-                //mPasswordView.setError(errorMsg); //TODO
-
-            }
-        })
-        {
-            @Override
-            public Map<String, String> getHeaders() {
-                HashMap<String, String> headers = new HashMap<String, String>();
-                headers.put("Authorization", "Bearer " + accessToken);
-                return headers;
-            }
-        };
+    private void initServices() {
+        audioRecorder = new AudioRecorder(this);
+        messageReceiver = new LocationTrackerBroadcastReceiver(this, audioRecorder);
+        // Register to receive messages.
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+                messageReceiver, new IntentFilter("new-location"));
     }
 
-
-    private JsonObjectRequest createPostSample(JSONObject jsonBody, String url) {
-        return new JsonObjectRequest(url, jsonBody,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        // TODO
-                        int i = 0;
-                    }
-
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                // TODO is a dummy, also gets here when no response is beeing sent
-                String msg = "";
-                try {
-                    if(error != null && error.networkResponse != null) {
-                        msg = new String(error.networkResponse.data, "UTF-8");
-                    }
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace(); //TODO
-                    return;
-                }
-            }
-        }) {
-            @Override
-            public Map<String, String> getHeaders() {
-                HashMap<String, String> headers = new HashMap<String, String>();
-                headers.put("Authorization", "Bearer " + accessToken);
-                return headers;
-            }
-            @Override
-            public String getBodyContentType()
-            {
-                return "application/json; charset=utf-8";
-            }
-        };
-    }
 }

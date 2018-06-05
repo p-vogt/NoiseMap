@@ -46,6 +46,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.patrick.noiserecorder.Network.RestCallFactory;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -267,7 +268,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      * Shows the progress UI and hides the login form.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
-    private void showProgress(final boolean show) {
+    public void showProgress(final boolean show) {
         // On Honeycomb MR2 we have the ViewPropertyAnimator APIs, which allow
         // for very easy animations. If available, use these APIs to fade-in
         // the progress spinner.
@@ -373,7 +374,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             final String userName = usernameView.getText().toString();
             final String password = passwordView.getText().toString();
 
-            StringRequest tokenRequest = createApiTokenRequest(userName,password,TOKEN_URL);
+            StringRequest tokenRequest = RestCallFactory.createApiTokenRequest(userName,password,TOKEN_URL,LoginActivity.this);
             // increase accepted timeout duration, because the azure web api seems to go into a
             // standby-ish mode when it gets no request for some time
             int acceptedTimeoutMs = 15000;
@@ -575,105 +576,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         btnSignIn.setEnabled(true);
         btnRegister.setEnabled(true);
     }
-    // TODO extra class ?
 
-    private StringRequest createApiTokenRequest(final String username, final String password, String url) {
-        return new StringRequest(Request.Method.POST, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        try {
-                            JSONObject resp = new JSONObject(response);
-                            accessToken = resp.getString("access_token"); //TODO delete private var?
-                            Bundle b = new Bundle();
-                            b.putString("accessToken", accessToken); //Your id
-
-                            // save user data
-                            SharedPreferences settings = getSharedPreferences("UserData", 0);
-                            SharedPreferences.Editor editor = settings.edit();
-                            editor.putString("Username",username);
-                            editor.putString("Password",password);
-                            editor.commit();
-
-                            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                            intent.putExtras(b);
-                            startActivity(intent);
-                        } catch (JSONException e) {
-                            Log.e(this.getClass().getName(), e.getStackTrace().toString());
-                            // TODO
-                        }
-                        showProgress(false);
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                String msg = "";
-                JSONObject obj;
-                String errorMsg = "unknown error";
-                if (error instanceof NetworkError) {
-                    Toast.makeText(LoginActivity.this,
-                            "Network error.",
-                            Toast.LENGTH_LONG).show();
-                } else if (error instanceof ServerError) {
-                    Toast.makeText(LoginActivity.this,
-                            "Server responded with an error.",
-                            Toast.LENGTH_LONG).show();
-                } else if (error instanceof AuthFailureError) {
-                    Toast.makeText(LoginActivity.this,
-                            "Authentication failed.",
-                            Toast.LENGTH_LONG).show();
-                } else if (error instanceof ParseError) {
-                    Toast.makeText(LoginActivity.this,
-                            "Servers response could not be parsed.",
-                            Toast.LENGTH_LONG).show();
-                } else if (error instanceof NoConnectionError) {
-                    Toast.makeText(LoginActivity.this,
-                            "Connection could not be established.",
-                            Toast.LENGTH_LONG).show();
-                } else if (error instanceof TimeoutError) {
-                    Toast.makeText(LoginActivity.this,
-                            "Timeout error. Please try again.",
-                            Toast.LENGTH_LONG).show();
-                } else {
-                    try {
-                        if(error != null && error.networkResponse != null && error.networkResponse.data != null) {
-                            msg = new String(error.networkResponse.data, "UTF-8");
-                            obj = new JSONObject(msg);
-                            if(obj.has("error_description")) {
-                                errorMsg = obj.getString("error_description");
-                            }
-                        }
-                    } catch (Exception e) {
-                        if(e.getStackTrace() != null) {
-                            Log.e(this.getClass().getName(), e.getStackTrace().toString());
-                        }
-                        else {
-                            Log.e(this.getClass().getName(), e.getMessage());
-                        }
-                    }
-                }
-                showProgress(false);
-                Toast.makeText(LoginActivity.this, //TODO
-                        errorMsg,
-                        Toast.LENGTH_LONG).show();
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
-                Map<String, String> params = new HashMap<>();
-                params.put("grant_type", "password");
-                params.put("username", username);
-                params.put("password", password);
-                return params;
-            }
-
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                HashMap<String, String> headers = new HashMap<String, String>();
-                headers.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-                return headers;
-            }
-        };
-    }
 }
 
