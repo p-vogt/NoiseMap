@@ -1,8 +1,10 @@
-package com.example.patrick.noiserecorder;
+package com.example.patrick.noiserecorder.Location;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+
+import com.example.patrick.noiserecorder.MainActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,10 +12,10 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
-class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
+public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
 
     MainActivity activity;
-    LocationTrackerBroadcastReceiver(MainActivity activity) {
+    public LocationTrackerBroadcastReceiver(MainActivity activity) {
         this.activity = activity;
     }
     @Override

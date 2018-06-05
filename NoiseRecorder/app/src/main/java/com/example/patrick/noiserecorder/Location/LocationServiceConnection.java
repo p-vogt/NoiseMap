@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder;
+package com.example.patrick.noiserecorder.Location;
 
 import android.content.ComponentName;
 import android.content.ServiceConnection;
@@ -6,9 +6,8 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.support.v7.app.AppCompatActivity;
 
-class LocationServiceConnection implements ServiceConnection {
+public class LocationServiceConnection implements ServiceConnection {
     private boolean isBound = false;
     private Messenger service;
 

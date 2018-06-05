@@ -31,7 +31,7 @@
             android:configChanges="orientation" />
 
         <service
-            android:name=".LocationTrackerService"
+            android:name=".Location.LocationTrackerService"
             android:enabled="true"
             android:exported="true" />
         <!--
