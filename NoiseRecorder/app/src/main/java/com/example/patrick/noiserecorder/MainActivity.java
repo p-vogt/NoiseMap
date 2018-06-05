@@ -28,6 +28,8 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.patrick.noiserecorder.AudioProcessing.AudioProcessing;
+import com.example.patrick.noiserecorder.AudioProcessing.RecordingConfig;
 import com.example.patrick.noiserecorder.Location.LocationServiceConnection;
 import com.example.patrick.noiserecorder.Location.LocationTrackerBroadcastReceiver;
 import com.example.patrick.noiserecorder.Location.LocationTrackerService;

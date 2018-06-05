@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder;
+package com.example.patrick.noiserecorder.AudioProcessing;
 import org.jtransforms.fft.DoubleFFT_1D;
 
 
@@ -10,7 +10,7 @@ public class AudioProcessing {
     private int numberOfFFTs = 0;
     private double averageDB = 0;
 
-    AudioProcessing() {
+    public AudioProcessing() {
 
         initCalculations();
     }
