@@ -37,20 +37,21 @@ public class HeatMap {
     final int DIRECTION_SOUTHEAST = 135;
     final int DIRECTION_SOUTHWEST = 225;
     final int DIRECTION_NORTHWEST = 315;
+    private double alpha;
     private final GoogleMap map;
-    private final MapsActivity activity;
 
-    public HeatMap(GoogleMap map,MapsActivity activity) {
+    public HeatMap(GoogleMap map, double initAlpha) {
         this.map = map;
-        this.activity = activity;
+        alpha = initAlpha;
     }
+
+
     private List<Polygon> polygons = new ArrayList<Polygon>();
     // used to stop the animation of a clicked polygon when another polygon has been clicked
     private Polygon lastClickedPolygon ;
     public void setLastClickedPolygon(Polygon poly) {
         lastClickedPolygon = poly;
     };
-
     private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
     private List<Sample> samples = new ArrayList<>();
     public static int applyAlphaToColor(double alpha, final int color) {
@@ -145,7 +146,7 @@ public class HeatMap {
         });
     }
 
-    public void refresh(OverlayType overlayType) {
+    public void refresh(OverlayType overlayType, final MapsActivity activity) {
         map.clear();
         polygons.clear();
 
@@ -197,10 +198,9 @@ public class HeatMap {
                     if(normalizedNoise > 1) {
                         normalizedNoise = 1;
                     }
-                    double alpha = activity.getAlpha();
+
                     Polygon poly = createPolygon(radius, center, meanNoise, normalizedNoise, alpha);
                     polygons.add(poly);
-
                     map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
                         public void onPolygonClick(final Polygon polygon) {
                             String displayText = "" + polygon.getTag();
@@ -296,14 +296,15 @@ public class HeatMap {
         }
     }
 
-    public void setPolygonAlpha(double alpha) {
+    public void setAlpha(double alpha) {
+        // update polygons
         for(Polygon poly : polygons) {
             int curColor = poly.getFillColor();
             if(curColor != 0) {
                 curColor = HeatMap.applyAlphaToColor(alpha, curColor);
                 poly.setFillColor(curColor);
             }
-
         }
+        this.alpha = alpha;
     }
 }

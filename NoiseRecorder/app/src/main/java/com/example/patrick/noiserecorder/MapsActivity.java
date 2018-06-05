@@ -1,10 +1,7 @@
 package com.example.patrick.noiserecorder;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.FragmentActivity;
@@ -17,28 +14,15 @@ import android.widget.CompoundButton;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.Switch;
-import android.widget.Toast;
 
 import com.example.patrick.noiserecorder.noisemap.HeatMap;
-import com.example.patrick.noiserecorder.noisemap.Sample;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Polygon;
-import com.google.android.gms.maps.model.PolygonOptions;
-import com.google.android.gms.maps.model.TileOverlayOptions;
-import com.google.maps.android.SphericalUtil;
-import com.google.maps.android.heatmaps.HeatmapTileProvider;
-import com.google.maps.android.heatmaps.WeightedLatLng;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLoadedCallback, GoogleMap.OnCameraIdleListener {
@@ -125,7 +109,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 double a = progress/100.d;
-                heatmap.setPolygonAlpha(a);
+                heatmap.setAlpha(a);
             }
 
             @Override
@@ -180,7 +164,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void refresh() {
         if(heatmap != null) {
-            heatmap.refresh(overlayType);
+            heatmap.refresh(overlayType, this);
         }
     }
 
@@ -195,7 +179,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
-        heatmap = new HeatMap(map, this);
+
+        heatmap = new HeatMap(map, getAlpha());
         heatmap.parseSamples(testResponse); // TODO
         refresh();
     }
@@ -210,7 +195,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    public double getAlpha() {
+    private double getAlpha() {
         return seekbarAlpha.getProgress()/100.0d;
     }
 }
