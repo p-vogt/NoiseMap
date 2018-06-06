@@ -2,7 +2,7 @@ package com.example.patrick.noiserecorder.audioprocessing;
 import org.jtransforms.fft.DoubleFFT_1D;
 
 
-public class AudioProcessing {
+public class AudioProcessor {
 
     final DoubleFFT_1D fft = new DoubleFFT_1D(RecordingConfig.BLOCK_SIZE_FFT);
     double window_function[] = new double[RecordingConfig.BLOCK_SIZE_FFT];
@@ -10,7 +10,7 @@ public class AudioProcessing {
     private int numberOfFFTs = 0;
     private double averageDB = 0;
 
-    public AudioProcessing() {
+    public AudioProcessor() {
 
         initCalculations();
     }
@@ -31,6 +31,7 @@ public class AudioProcessing {
             double f = i * RecordingConfig.FREQUENCY_RESOLUTION;
             double f2 = f * f;
             double f4 = f2 * f2;
+            //TODO ref
             a_weighting[i] = (12200 * 12200 * f4) / ((f2 + 20.6 * 20.6) * (f2 + 12200 * 12200) * Math.sqrt(f2 + 107.7 * 107.7) * Math.sqrt(f2 + 737.9 * 737.9));
         }
     }
@@ -45,7 +46,6 @@ public class AudioProcessing {
     }
 
     public void process(short[] valueBuffer) {
-
 
         double vals[] = new double[RecordingConfig.BLOCK_SIZE_FFT];
 
@@ -83,7 +83,7 @@ public class AudioProcessing {
                 sumOfAmplitudes += dbFreqA;
             }
             else {
-                continue; // invalid magnitude, f.e. when the audio recorder still starting the recording
+                continue; // invalid magnitude, f.e. when the audio recorder is still starting the recording
             }
         }
         // 7b

@@ -1,4 +1,5 @@
 ﻿using NoiseMapRestAPI.Models;
+using System.Data.Entity;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,13 +10,22 @@ namespace NoiseMapRestAPI.Controllers
 {
     public class SampleController : ApiController
     {
+        public class Samples
+        {
+            public DbSet<NOISE_SAMPLE> samples;
+            public Samples(DbSet<NOISE_SAMPLE> samples)
+            {
+                this.samples = samples;
+            }
+        }
+
         private readonly NoiseMapEntities db = new NoiseMapEntities();
 
         // GET: api/Sample
         [Authorize]
         public HttpResponseMessage Get()
         {
-            var samples = db.NOISE_SAMPLE;
+            var samples = new Samples(db.NOISE_SAMPLE);
             if (samples == null)
             {
                 return Request.CreateResponse(HttpStatusCode.OK, "");
@@ -29,6 +39,8 @@ namespace NoiseMapRestAPI.Controllers
         {
             db.Dispose();
         }
+
+
         // GET: api/Sample/5
         [Authorize]
         public HttpResponseMessage Get(int id)

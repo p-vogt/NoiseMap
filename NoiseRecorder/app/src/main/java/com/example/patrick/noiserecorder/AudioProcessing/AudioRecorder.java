@@ -14,7 +14,7 @@ import java.util.Calendar;
 
 public class AudioRecorder {
 
-    private AudioProcessing fft = new AudioProcessing();
+    private AudioProcessor fft = new AudioProcessor();
     private double lastAverageDb = -1.0d;
     boolean isRecording = false;
     private long timeStartedRecordingInMs;

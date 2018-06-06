@@ -31,7 +31,7 @@ public class HeatMap {
         OVERLAY_TILES,
         OVERLAY_HEATMAP
     }
-
+    private boolean isGridVisible = false;
     //TODO
     final int DIRECTION_NORTHEAST = 45;
     final int DIRECTION_SOUTHEAST = 135;
@@ -40,39 +40,61 @@ public class HeatMap {
     private double alpha;
     private final GoogleMap map;
 
-    public HeatMap(GoogleMap map, double initAlpha) {
+    public HeatMap(GoogleMap map, double initAlpha, final MapsActivity activity) {
         this.map = map;
         alpha = initAlpha;
+
+        map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
+            public void onPolygonClick(final Polygon polygon) {
+                String displayText = "" + polygon.getTag();
+                Toast.makeText(activity,
+                        displayText,
+                        Toast.LENGTH_LONG)
+                        .show();
+
+                setLastClickedPolygon(polygon);
+                addPolygonBorderAnimation(polygon);
+            }
+        });
     }
 
 
-    private List<Polygon> polygons = new ArrayList<Polygon>();
+    private List<Polygon> polygons = new ArrayList<>();
+    private List<PolygonOptions> cachedPolygonOptions = new ArrayList<>();
     // used to stop the animation of a clicked polygon when another polygon has been clicked
     private Polygon lastClickedPolygon ;
-    public void setLastClickedPolygon(Polygon poly) {
-        lastClickedPolygon = poly;
-    };
     private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
     private List<Sample> samples = new ArrayList<>();
-    public static int applyAlphaToColor(double alpha, final int color) {
+    private List<WeightedLatLng> cachedWeightedSamples = new ArrayList<>();
+    private List<Double> cachedMeanNoise = new ArrayList<>();
+    private void setLastClickedPolygon(Polygon poly) {
+        lastClickedPolygon = poly;
+    };
+
+    private static int applyAlphaToColor(double alpha, final int color) {
         int alphaColor = color & 0x00ffffff;
         alphaColor = (int)(alpha * 255) << 24 | alphaColor;
         return alphaColor;
     }
 
-    public Polygon getLastClickedPolygon() {
+    private Polygon getLastClickedPolygon() {
         return lastClickedPolygon;
     }
     public double getMeanNoise(int heightCounter, int widthCounter) {
         double sum = 0.0d;
         List<Double> samplesInArea = noiseMatrix.get(heightCounter).get(widthCounter);
         for (double curValue : samplesInArea) {
-            sum += curValue;
+            if(curValue != Double.NaN && curValue != Double.POSITIVE_INFINITY && curValue != Double.NEGATIVE_INFINITY) {
+                sum += curValue;
+            }
+        }
+        if(samplesInArea.size() == 0) {
+            return -1.0;
         }
         return sum/samplesInArea.size();
     }
 
-    public void clusterSamples(LatLng northWestVisible, double offsetLong, double offsetLat) {
+    private void clusterSamples(LatLng northWestVisible, double offsetLong, double offsetLat) {
         for(Sample sample: samples) {
             // check if value is in visible area
             LatLng curPos = sample.position;
@@ -82,32 +104,43 @@ public class HeatMap {
                 int i = (int) Math.floor((curPos.latitude-northWestVisible.latitude)/offsetLat);
                 int j = (int) Math.floor((curPos.longitude-northWestVisible.longitude)/offsetLong);
                 noiseMatrix.get(i).get(j).add(sample.noise);
-
             }
         }
     }
 
-    public void parseSamples(String jsonString) {
-        JSONArray responseArray;
+    public boolean parseSamples(JSONObject json) {
+        JSONArray sampleArray;
         try {
-            responseArray = new JSONArray(jsonString);
-            for(int i = 0; i < responseArray.length(); i++) {
-                if (responseArray.get(i) instanceof JSONObject) {
+            sampleArray = (JSONArray) json.get("samples");
+            int arrayLen = sampleArray.length();
+            for(int i = 0; i < arrayLen; i++) {
+                if (sampleArray.get(i) instanceof JSONObject) {
 
                     //TODO convert to Sample, extend sample class
-                    double longitude = (double)((JSONObject)responseArray.get(i)).get("longitude");
-                    double latitude = (double)((JSONObject)responseArray.get(i)).get("latitude");
-                    double noise = (double)((JSONObject)responseArray.get(i)).get("noiseValue");
-                    LatLng position = new LatLng(latitude, longitude);
-                    samples.add(new Sample(position, noise));
+                    JSONObject curObject = (JSONObject)sampleArray.get(i);
+                    if(curObject != null) {
+                        if(!curObject.isNull(("longitude"))) {
+                            double longitude = curObject.getDouble("longitude");
+                            if(!curObject.isNull(("latitude"))) {
+                                double latitude = curObject.getDouble("latitude");
+                                if(!curObject.isNull(("noiseValue"))) {
+                                    double noise = curObject.getDouble("noiseValue");
+                                    LatLng position = new LatLng(latitude, longitude);
+                                    samples.add(new Sample(position, noise));
+                                }
+                            }
+                        }
+                    }
                 }
             }
+            boolean breakpoint = true;
         } catch (JSONException e) {
-            e.printStackTrace();
-            return; // TODO
+
+            return false; // TODO invalid json response
         }
+        return true;
     }
-    public void initMatrix(double NUM_OF_RECTS_WIDTH, double numOfRectsHeight) {
+    private void initMatrix(double NUM_OF_RECTS_WIDTH, double numOfRectsHeight) {
         noiseMatrix.clear();
         for(int i = 0; i < numOfRectsHeight; i++) {
             List<List<Double>> row = new ArrayList<>();
@@ -119,7 +152,7 @@ public class HeatMap {
         }
     }
 
-    public void addPolygonBorderAnimation(final Polygon polygon) {
+    private void addPolygonBorderAnimation(final Polygon polygon) {
         final long start = SystemClock.uptimeMillis();
         final long animationDurationInMs = 1000;
         final long animationIntervalInMs = 100;
@@ -145,94 +178,126 @@ public class HeatMap {
             }
         });
     }
-
-    public void refresh(OverlayType overlayType, final MapsActivity activity) {
-        map.clear();
-        polygons.clear();
-
+    static int refreshCounter = 0;
+    //TODO refactor
+    public void refresh(OverlayType overlayType, boolean fullRefresh) {
+        map.clear(); // TODO check: does this clear the onClickListener for the polygons?
+        refreshCounter++;
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
         LatLng northWestVisible = new LatLng(northEastVisible.latitude,southWestVisible.longitude);
-        double NUM_OF_RECTS_WIDTH = 20; // TODO configurable
+        int NUM_OF_RECTS_WIDTH = 20; // TODO configurable
 
         double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / NUM_OF_RECTS_WIDTH / 2;
         double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / radius / 2;
         LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
-
-        initMatrix(NUM_OF_RECTS_WIDTH, numOfRectsHeight);
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
         double offsetLat =  2 * (start.latitude - northWestVisible.latitude);
+        if(fullRefresh) {
+            polygons.clear();
+            cachedPolygonOptions.clear();
+            cachedWeightedSamples.clear();
+            cachedMeanNoise.clear();
+            initMatrix(NUM_OF_RECTS_WIDTH, numOfRectsHeight);
+            clusterSamples(northWestVisible, offsetLong, offsetLat);
 
-        clusterSamples(northWestVisible, offsetLong, offsetLat);
 
-        double lat1 = 52.0382444;
-        double long1 = 8.5257916;
-        LatLng bielefeld1 = new LatLng(lat1, long1);
+            double lat1 = 52.0382444;
+            double long1 = 8.5257916;
+            LatLng bielefeld1 = new LatLng(lat1, long1);
 
-        LatLng bielefeld2 = new LatLng(52.0392444, 8.5257916);
+            LatLng bielefeld2 = new LatLng(52.0392444, 8.5257916);
 
-        Collection<WeightedLatLng> weightedSamples = new ArrayList<>();
+            // run through the whole map grid (vertically)
+            //  ^
+            //  |
+            //  v
+            for (int heightCounter = 0; heightCounter < numOfRectsHeight; heightCounter++) {
+                // run through the whole map grid (horizontally)
+                //
+                // <--->
+                //
+                for (int widthCounter = 0; widthCounter < NUM_OF_RECTS_WIDTH; widthCounter++) {
 
-        // run through the whole map grid (vertically)
-        //  ^
-        //  |
-        //  v
-        for(int heightCounter = 0; heightCounter < numOfRectsHeight; heightCounter++) {
-            // run through the whole map grid (horizontally)
-            //
-            // <--->
-            //
-            for(int widthCounter = 0; widthCounter < NUM_OF_RECTS_WIDTH; widthCounter++) {
+                    LatLng center = new LatLng(start.latitude + heightCounter * offsetLat, start.longitude + widthCounter * offsetLong);
 
-                double meanNoise = getMeanNoise(heightCounter, widthCounter);
+                    // TODO cache
+                    double meanNoise = -1.0d;
+                    double normalizedNoise = -1.0d;
+                    if (fullRefresh) {
+                        meanNoise = getMeanNoise(heightCounter, widthCounter);
+                        double max = 80;
+                        double min = 30;
+                        normalizedNoise = getNormalizedNoise(meanNoise, max, min);
+                        WeightedLatLng curWLatLng = new WeightedLatLng(center, normalizedNoise);
+                        cachedWeightedSamples.add(curWLatLng);
+                        cachedMeanNoise.add(meanNoise);
+                    } else {
+                        int index = heightCounter * NUM_OF_RECTS_WIDTH + widthCounter;
+                        if (index < cachedWeightedSamples.size()) {
+                            normalizedNoise = cachedWeightedSamples.get(index).getIntensity();
+                            meanNoise = cachedMeanNoise.get(index);
+                        }
 
-                LatLng center = new LatLng(start.latitude + heightCounter*offsetLat,start.longitude+widthCounter*offsetLong);
-                //TODO customizable range
-                double normalizedNoise = (meanNoise - 30) * 75 / 25.0d / 100.0d;
-                if(meanNoise > 0.0) {
-                    weightedSamples.add(new WeightedLatLng(center, normalizedNoise));
-                }
-                // Draw tiles if the tiles overlay is selected
-                if(overlayType == OverlayType.OVERLAY_TILES) {
-
-                    if(normalizedNoise > 1) {
-                        normalizedNoise = 1;
                     }
 
-                    Polygon poly = createPolygon(radius, center, meanNoise, normalizedNoise, alpha);
-                    polygons.add(poly);
-                    map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
-                        public void onPolygonClick(final Polygon polygon) {
-                            String displayText = "" + polygon.getTag();
-                            Toast.makeText(activity,
-                                    displayText,
-                                    Toast.LENGTH_LONG)
-                                    .show();
-
-                            setLastClickedPolygon(polygon);
-                            addPolygonBorderAnimation(polygon);
-                        }
-                    });
+                    // Draw tiles if the tiles overlay is selected
+                    if (overlayType == OverlayType.OVERLAY_TILES) {
+                        PolygonOptions polyOptions = createPolygonOptions(radius, center, meanNoise, normalizedNoise, alpha);
+                        cachedPolygonOptions.add(polyOptions);
+                    }
                 }
             }
         }
-
         if(overlayType == OverlayType.OVERLAY_HEATMAP) {
-            HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
-                    .weightedData(weightedSamples)
-                    .radius(50)
-                    .build();
+            if(cachedWeightedSamples != null && cachedWeightedSamples.size() > 0) {
+                Collection weightedSamples = new ArrayList();
+                for(WeightedLatLng sample : cachedWeightedSamples) {
+                    Double curVal = sample.getIntensity();
+                    if(!Double.isNaN(curVal) && curVal > 0) {
+                        weightedSamples.add(sample);
+                    }
 
-            // TODO own gradient?
-            // Create the gradient.
-            int[] colors = {
-                    Color.rgb(102, 225, 0), // green
-                    Color.rgb(255, 0, 0)    // red
-            };
+                }
+                HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
+                        .weightedData(weightedSamples)
+                        .radius(50)
+                        .build();
 
-            map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+                // TODO own gradient?
+                // Create the gradient.
+                int[] colors = {
+                        Color.rgb(102, 225, 0), // green
+                        Color.rgb(255, 0, 0)    // red
+                };
+
+                map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+            }
+        } else if(overlayType == OverlayType.OVERLAY_TILES) {
+            int counter = 0;
+            polygons.clear();
+            for(PolygonOptions option : cachedPolygonOptions) {
+                double meanNoise = cachedMeanNoise.get(counter);
+                if(this.isGridVisible || meanNoise > 0.0d) {
+                    Polygon poly = addPolygonToMap(meanNoise, option);
+                    polygons.add(poly);
+                }
+                counter++;
+            }
         }
+
     }
+
+    private double getNormalizedNoise(double meanNoise, double max, double min) {
+        double normalizedNoise = (meanNoise - min) * 1/(max-min);
+        if(normalizedNoise > 1) {
+            normalizedNoise = 1;
+        } else if(normalizedNoise < 0) {
+            normalizedNoise = 0;
+        }
+        return normalizedNoise;
+    }
+
     private static int getArgbColor(double normalizedValue, double alpha) {
         int fillColor;
         int red = (int)(510 * normalizedValue);
@@ -254,8 +319,7 @@ public class HeatMap {
         return fillColor;
     }
     @NonNull
-    private Polygon createPolygon(double radius,LatLng center, double meanNoise, double normalizedNoise,double alpha) {
-        Polygon poly;// calculate the center of the current grid tile
+    private PolygonOptions createPolygonOptions(double radius, LatLng center, double meanNoise, double normalizedNoise, double alpha) {
 
         // The diagonal length of the tile from the center to an edge (diag) is sqrt(2)*radius
         // since r^2 + r^2 = diag^2
@@ -264,36 +328,33 @@ public class HeatMap {
         LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHWEST);
         LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
         int fillColor = 0;
+        boolean clickable= false;
         if(meanNoise > 0.0) {
             fillColor = getArgbColor(normalizedNoise, alpha);
+            clickable = true;
         }
-        PolygonOptions rectOptions = new PolygonOptions()
+        PolygonOptions polygonOptions = new PolygonOptions()
                 .add(targetSouthWest)
                 .add(targetSouthEast)
                 .add(targetNorthEast)
                 .add(targetNorthWest)
                 .fillColor(fillColor)
-                .strokeWidth(0f); // the width gets set later, depending on whether the grid is on or off
-        poly = map.addPolygon(rectOptions);
+                .clickable(clickable)
+                .strokeWidth(1.0f);
+        return polygonOptions;
+    }
+
+    @NonNull
+    private Polygon addPolygonToMap(double meanNoise, PolygonOptions polygonOptions) {
+        Polygon poly = map.addPolygon(polygonOptions);
         if(meanNoise > 0d) {
-            poly.setTag(String.format("%.2f",  meanNoise) + " db(A)");
-            poly.setClickable(true);
-        }
+           poly.setTag(String.format("%.2f",  meanNoise) + " db(A)");
+       }
         return poly;
     }
 
     public void setGridVisible(boolean showGrid) {
-        for(Polygon poly : polygons) {
-            if(showGrid) {
-                poly.setStrokeWidth(1.0f);
-                poly.setVisible(true);
-            } else {
-                poly.setStrokeWidth(0f);
-                if(poly.getFillColor() == 0) {
-                    poly.setVisible(false);
-                }
-            }
-        }
+        isGridVisible = showGrid;
     }
 
     public void setAlpha(double alpha) {

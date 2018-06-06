@@ -19,6 +19,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.example.patrick.noiserecorder.LoginActivity;
 import com.example.patrick.noiserecorder.MainActivity;
+import com.example.patrick.noiserecorder.MapsActivity;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,15 +31,15 @@ import java.util.Map;
 
 public final class RestCallFactory {
 
-    public static StringRequest createGetRequest(final String url, final String accessToken) {
+    public static StringRequest createGetRequest(final String url, final String accessToken, final MapsActivity activity) {
         return new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        JSONArray resp;
+                        JSONObject resp;
                         try {
-                            resp = new JSONArray(response);
-                            int i = 0;
+                            resp = new JSONObject(response);
+                            activity.onRequestResponseCallback(resp);
                         } catch (JSONException e) {
                             e.printStackTrace();
                             // TODO invalid response

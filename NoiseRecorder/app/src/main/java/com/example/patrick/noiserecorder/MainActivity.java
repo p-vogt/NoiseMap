@@ -90,12 +90,16 @@ public class MainActivity extends AppCompatActivity {
      */
     public void postNewSample(JSONObject sampleBody) {
 
-        //TODO move
-        String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
-        String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
+        // TODO
+        boolean offline_mode = true;
+        if(!offline_mode) {
+            //TODO move
+            String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
+            String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
 
-        JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
-        requestQueue.add(postSample);
+            JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
+            requestQueue.add(postSample);
+        }
     }
 
     @Override
