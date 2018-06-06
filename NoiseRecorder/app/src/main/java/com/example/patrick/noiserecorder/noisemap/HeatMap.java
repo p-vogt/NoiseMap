@@ -226,8 +226,8 @@ public class HeatMap {
                     double normalizedNoise = -1.0d;
                     if (fullRefresh) {
                         meanNoise = getMeanNoise(heightCounter, widthCounter);
-                        double max = 80;
-                        double min = 30;
+                        double max = 80.0d;
+                        double min = 45.0d;
                         normalizedNoise = getNormalizedNoise(meanNoise, max, min);
                         WeightedLatLng curWLatLng = new WeightedLatLng(center, normalizedNoise);
                         cachedWeightedSamples.add(curWLatLng);

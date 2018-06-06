@@ -143,13 +143,18 @@ public class MainActivity extends AppCompatActivity {
         btnStartStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                //TODO delete
-                adapter.clear();
-                adapter.notifyDataSetChanged();
-
-                btnStartStop.setText(btnStartStop.getText() == "Start" ? "Stop" : "Start");
-                btnStartStop.setBackgroundColor(btnStartStop.getText() == "Start" ? Color.parseColor("#33cc33") : Color.parseColor("#cc0000"));
+                if(audioRecorder== null) {
+                    return;
+                }
+                if(audioRecorder.isRecording()) {
+                    audioRecorder.stopRecording();
+                    btnStartStop.setText("Start");
+                    btnStartStop.setBackgroundColor(Color.parseColor("#33cc33"));
+                } else {
+                    audioRecorder.startRecording();
+                    btnStartStop.setText("Stop");
+                    btnStartStop.setBackgroundColor(Color.parseColor("#cc0000"));
+                }
             }
         });
 

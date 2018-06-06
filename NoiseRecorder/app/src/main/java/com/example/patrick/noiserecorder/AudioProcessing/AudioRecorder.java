@@ -38,34 +38,35 @@ public class AudioRecorder {
         Intent locationIntent = new Intent(caller, LocationTrackerService.class);
         caller.bindService(locationIntent, this.serviceConnection, Context.BIND_AUTO_CREATE);
 
-        final Handler recordingHandler = new Handler();
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                if(!isRecording) {
-                    startRecording();
-                }
-                // Recursive call
-                final int delayTimeToNextCall = processAudioData();
-                recordingHandler.postDelayed(this, delayTimeToNextCall);
-            }
-        };
-
-        //Start
-        recordingHandler.post(runnable);
     }
     /**
      * Starts the audio recorder and sets the record starting time.
      */
-    private void startRecording() {
+    public void startRecording() {
+        if(!isRecording) {
+            isRecording = true;
+            Calendar calendar = Calendar.getInstance();
+            timeStartedRecordingInMs = calendar.getTimeInMillis();
+            final Handler recordingHandler = new Handler();
+            Runnable runnable = new Runnable() {
+                @Override
+                public void run() {
+                    if(isRecording) {
+                        audioRecorder.startRecording();
+                        // Recursive call
+                        final int delayTimeToNextCall = processAudioData();
+                        recordingHandler.postDelayed(this, delayTimeToNextCall);
+                    }
+                }
+            };
 
-        isRecording = true;
-        Calendar calendar = Calendar.getInstance();
-        timeStartedRecordingInMs = calendar.getTimeInMillis();
-        audioRecorder.startRecording();
-
+            // Start
+            recordingHandler.post(runnable);
+        }
     }
-
+    public boolean isRecording() {
+        return isRecording;
+    }
     /**
      * Processes one block of audio. Calculates the FFT and
      * @returns the number of milliseconds until the next recording should occur.
@@ -96,9 +97,11 @@ public class AudioRecorder {
     /**
      * Stops the audio recording.
      */
-    private void stopRecording() {
-        audioRecorder.stop();
-        isRecording = false;
+    public void stopRecording() {
+        if(isRecording) {
+            audioRecorder.stop();
+            isRecording = false;
+        }
     }
 
 
@@ -116,7 +119,7 @@ public class AudioRecorder {
      * Also plots the measurement at the gui.
      */
     private void finishMeasurement() {
-        stopRecording();
+        audioRecorder.stop();
         lastAverageDb = fft.finishProcess();
         this.serviceConnection.requestLocation();
         callingActivity.onNewMeasurementDone(this.lastAverageDb);
