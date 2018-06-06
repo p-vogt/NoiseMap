@@ -30,11 +30,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.patrick.noiserecorder.network.RestCallFactory;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -422,7 +425,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         @Override
         protected Boolean doInBackground(Void... params) {
 
-            JsonRequest registerUserRequest = null;
+            Request<JSONObject> registerUserRequest = null;
             try {
                 registerUserRequest = RestCallFactory.createRegisterUserRequest(username, password, confirmPassword, TOKEN_URL, LoginActivity.this);
             } catch (IllegalAccessException e) {
