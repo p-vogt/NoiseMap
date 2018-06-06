@@ -19,6 +19,7 @@ import android.widget.CompoundButton;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
@@ -154,6 +155,11 @@ public class MainActivity extends AppCompatActivity {
                     audioRecorder.startRecording();
                     btnStartStop.setText("Stop");
                     btnStartStop.setBackgroundColor(Color.parseColor("#cc0000"));
+                    if(switchOfflineMode.isChecked()) {
+                        Toast.makeText(MainActivity.this,"!!!OFFLINE MODE ACTIVATED!!!",Toast.LENGTH_LONG).show();
+                        btnStartStop.setText("OFFLINE");
+                        btnStartStop.setBackgroundColor(Color.parseColor("#ffff00"));
+                    }
                 }
             }
         });
