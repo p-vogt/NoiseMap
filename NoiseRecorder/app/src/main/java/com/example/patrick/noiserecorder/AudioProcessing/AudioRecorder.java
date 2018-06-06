@@ -103,6 +103,7 @@ public class AudioRecorder {
     public void stopRecording() {
         if(isRecording) {
             if(audioRecorder != null) {
+
                 audioRecorder.stop();
                 audioRecorder.release();
             }
@@ -128,6 +129,7 @@ public class AudioRecorder {
         if(audioRecorder != null) {
             audioRecorder.stop();
             audioRecorder.release();
+            audioRecorder = null;
         }
 
         startNewRecording = true;
