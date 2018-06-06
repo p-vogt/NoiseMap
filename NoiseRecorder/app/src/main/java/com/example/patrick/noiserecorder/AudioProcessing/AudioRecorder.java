@@ -19,21 +19,14 @@ public class AudioRecorder {
     boolean isRecording = false;
     private long timeStartedRecordingInMs;
     private LocationServiceConnection serviceConnection = new LocationServiceConnection();
+    // with this flag the audio recorder gets started again (at the start of a new measurement)
+    private boolean startNewRecording = true;
     MainActivity callingActivity;
 
-    AudioRecord audioRecorder = new AudioRecord(
-            RecordingConfig.AUDIO_SOURCE,
-            RecordingConfig.SAMPLE_RATE_IN_HZ,
-            RecordingConfig.CHANNEL_CONFIG,
-            RecordingConfig.AUDIO_FORMAT,
-            RecordingConfig.BUFFER_SIZE_IN_BYTES);
+    AudioRecord audioRecorder;
 
     public AudioRecorder(MainActivity caller) {
         this.callingActivity = caller;
-        if (audioRecorder.getState() == AudioRecord.STATE_UNINITIALIZED) {
-            Toast.makeText(caller, "Audio recorder not initialized", Toast.LENGTH_SHORT).show();
-            return;
-        }
         // Bind to LocalService
         Intent locationIntent = new Intent(caller, LocationTrackerService.class);
         caller.bindService(locationIntent, this.serviceConnection, Context.BIND_AUTO_CREATE);
@@ -45,14 +38,24 @@ public class AudioRecorder {
     public void startRecording() {
         if(!isRecording) {
             isRecording = true;
-            Calendar calendar = Calendar.getInstance();
-            timeStartedRecordingInMs = calendar.getTimeInMillis();
             final Handler recordingHandler = new Handler();
             Runnable runnable = new Runnable() {
                 @Override
                 public void run() {
                     if(isRecording) {
-                        audioRecorder.startRecording();
+                        if(startNewRecording) {
+                            Calendar calendar = Calendar.getInstance();
+                            timeStartedRecordingInMs = calendar.getTimeInMillis();
+                            audioRecorder = new AudioRecord(
+                                    RecordingConfig.AUDIO_SOURCE,
+                                    RecordingConfig.SAMPLE_RATE_IN_HZ,
+                                    RecordingConfig.CHANNEL_CONFIG,
+                                    RecordingConfig.AUDIO_FORMAT,
+                                    RecordingConfig.BUFFER_SIZE_IN_BYTES);
+                            audioRecorder.startRecording();
+                            startNewRecording = false;
+                        }
+
                         // Recursive call
                         final int delayTimeToNextCall = processAudioData();
                         recordingHandler.postDelayed(this, delayTimeToNextCall);
@@ -99,7 +102,10 @@ public class AudioRecorder {
      */
     public void stopRecording() {
         if(isRecording) {
-            audioRecorder.stop();
+            if(audioRecorder != null) {
+                audioRecorder.stop();
+                audioRecorder.release();
+            }
             isRecording = false;
         }
     }
@@ -119,7 +125,12 @@ public class AudioRecorder {
      * Also plots the measurement at the gui.
      */
     private void finishMeasurement() {
-        audioRecorder.stop();
+        if(audioRecorder != null) {
+            audioRecorder.stop();
+            audioRecorder.release();
+        }
+
+        startNewRecording = true;
         lastAverageDb = fft.finishProcess();
         this.serviceConnection.requestLocation();
         callingActivity.onNewMeasurementDone(this.lastAverageDb);
