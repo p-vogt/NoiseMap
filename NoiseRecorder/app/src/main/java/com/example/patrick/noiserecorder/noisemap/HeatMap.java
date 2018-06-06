@@ -34,9 +34,9 @@ public class HeatMap {
     private boolean isGridVisible = false;
     //TODO
     final int DIRECTION_NORTHEAST = 45;
-    final int DIRECTION_SOUTHEAST = 135;
-    final int DIRECTION_SOUTHWEST = 225;
-    final int DIRECTION_NORTHWEST = 315;
+    final int DIRECTION_SOUTHEAST = DIRECTION_NORTHEAST + 90;
+    final int DIRECTION_SOUTHWEST = DIRECTION_SOUTHEAST + 90;
+    final int DIRECTION_NORTHWEST = DIRECTION_SOUTHWEST + 90;
     private double alpha;
     private final GoogleMap map;
 
@@ -186,10 +186,10 @@ public class HeatMap {
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
         LatLng northWestVisible = new LatLng(northEastVisible.latitude,southWestVisible.longitude);
-        int NUM_OF_RECTS_WIDTH = 20; // TODO configurable
+        int NUM_OF_TILES_WIDTH = 20; // TODO configurable
 
-        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / NUM_OF_RECTS_WIDTH / 2;
-        double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / radius / 2;
+        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / NUM_OF_TILES_WIDTH / 2;
+        double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / (2*radius);
         LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
         double offsetLat =  2 * (start.latitude - northWestVisible.latitude);
@@ -198,7 +198,7 @@ public class HeatMap {
             cachedPolygonOptions.clear();
             cachedWeightedSamples.clear();
             cachedMeanNoise.clear();
-            initMatrix(NUM_OF_RECTS_WIDTH, numOfRectsHeight);
+            initMatrix(NUM_OF_TILES_WIDTH, numOfRectsHeight);
             clusterSamples(northWestVisible, offsetLong, offsetLat);
 
 
@@ -217,7 +217,7 @@ public class HeatMap {
                 //
                 // <--->
                 //
-                for (int widthCounter = 0; widthCounter < NUM_OF_RECTS_WIDTH; widthCounter++) {
+                for (int widthCounter = 0; widthCounter < NUM_OF_TILES_WIDTH; widthCounter++) {
 
                     LatLng center = new LatLng(start.latitude + heightCounter * offsetLat, start.longitude + widthCounter * offsetLong);
 
@@ -233,7 +233,7 @@ public class HeatMap {
                         cachedWeightedSamples.add(curWLatLng);
                         cachedMeanNoise.add(meanNoise);
                     } else {
-                        int index = heightCounter * NUM_OF_RECTS_WIDTH + widthCounter;
+                        int index = heightCounter * NUM_OF_TILES_WIDTH + widthCounter;
                         if (index < cachedWeightedSamples.size()) {
                             normalizedNoise = cachedWeightedSamples.get(index).getIntensity();
                             meanNoise = cachedMeanNoise.get(index);
