@@ -3,6 +3,7 @@ package com.example.patrick.noiserecorder;
 import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -14,7 +15,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ListView;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.android.volley.RequestQueue;
@@ -37,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private String accessToken;
     private RequestQueue requestQueue;
     private BroadcastReceiver messageReceiver;
-
+    private Switch switchOfflineMode;
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -90,13 +93,11 @@ public class MainActivity extends AppCompatActivity {
      */
     public void postNewSample(JSONObject sampleBody) {
 
-        // TODO
-        boolean offline_mode = true;
+        boolean offline_mode = switchOfflineMode.isChecked();
         if(!offline_mode) {
             //TODO move
             String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
             String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
-
             JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
             requestQueue.add(postSample);
         }
@@ -120,7 +121,21 @@ public class MainActivity extends AppCompatActivity {
         initServices();
         requestQueue = Volley.newRequestQueue(this);
         textMessage = (TextView) findViewById(R.id.message);
+        switchOfflineMode = (Switch) findViewById(R.id.switchOfflineMode);
 
+        SharedPreferences settings = getSharedPreferences("UserData", 0);
+        boolean offlineMode = settings.getBoolean("OfflineMode", false);
+        switchOfflineMode.setChecked(offlineMode);
+        switchOfflineMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                // save settings
+                SharedPreferences settings = MainActivity.this.getSharedPreferences("UserData", 0);
+                SharedPreferences.Editor editor = settings.edit();
+                editor.putBoolean("OfflineMode",isChecked);
+                editor.commit();
+            }
+        });
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(onNavigationItemSelectedListener);
 
