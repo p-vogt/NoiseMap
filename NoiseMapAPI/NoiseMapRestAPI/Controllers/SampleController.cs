@@ -10,10 +10,10 @@ namespace NoiseMapRestAPI.Controllers
 {
     public class SampleController : ApiController
     {
-        public class Samples
+        public class FilteredSamples
         {
-            public DbSet<NOISE_SAMPLE> samples;
-            public Samples(DbSet<NOISE_SAMPLE> samples)
+            public IQueryable samples;
+            public FilteredSamples(IQueryable samples)
             {
                 this.samples = samples;
             }
@@ -25,15 +25,60 @@ namespace NoiseMapRestAPI.Controllers
         [Authorize]
         public HttpResponseMessage Get()
         {
-            var samples = new Samples(db.NOISE_SAMPLE);
-            if (samples == null)
+            if (db.NOISE_SAMPLE == null || db.NOISE_SAMPLE.Count() == 0)
             {
-                return Request.CreateResponse(HttpStatusCode.OK, "");
+                return Request.CreateResponse(HttpStatusCode.OK, "[]");
             }
-            else
+
+            var query = Request.GetQueryNameValuePairs().ToDictionary(x => x.Key, x => x.Value);
+
+            // filter the region
+            var longitudeStart = 0.0d;
+            var longitudeEnd = 0.0d;
+            var latitudeStart = 0.0d;
+            var latitudeEnd = 0.0d;
+            var isValid = false;
+            if (query.Keys.Contains(nameof(longitudeStart)) && query.Keys.Contains(nameof(longitudeEnd))
+                && query.Keys.Contains(nameof(latitudeStart)) && query.Keys.Contains(nameof(latitudeEnd)))
             {
-                return Request.CreateResponse(HttpStatusCode.OK, samples);
+                isValid = double.TryParse(query[nameof(longitudeStart)], out longitudeStart);
+                if (isValid)
+                {
+                    isValid = double.TryParse(query[nameof(longitudeEnd)], out longitudeEnd);
+                }
+                if (isValid)
+                {
+                    isValid = double.TryParse(query[nameof(latitudeStart)], out latitudeStart);
+                }
+                if (isValid)
+                {
+                    isValid = double.TryParse(query[nameof(latitudeEnd)], out latitudeEnd);
+                }
             }
+            
+            if (!isValid)
+            {
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "requst invalid");
+            }
+            // swap values if start > end
+            if (longitudeStart > longitudeEnd)
+            {
+                var tmp = longitudeStart;
+                longitudeStart = longitudeEnd;
+                longitudeEnd = tmp;
+            }
+            if (latitudeStart > latitudeEnd)
+            {
+                var tmp = latitudeStart;
+                latitudeStart = latitudeEnd;
+                latitudeEnd = tmp;
+            }
+
+            var filteredData = db.NOISE_SAMPLE.Where(x => x.longitude >= longitudeStart && x.longitude <= longitudeEnd
+                                    && x.latitude >= latitudeStart && x.latitude <= latitudeEnd);
+
+            var filteredSamples = new FilteredSamples(filteredData);
+            return Request.CreateResponse(HttpStatusCode.OK, filteredSamples);
         }
         ~SampleController()
         {
