@@ -33,9 +33,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLoadedCallback,OnRequestResponseCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-    private RequestQueue requestQueue;
     private String accessToken;
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -69,7 +68,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestQueue = Volley.newRequestQueue(this);
         setContentView(R.layout.activity_maps);
         Bundle b = getIntent().getExtras();
         if (b != null) {
@@ -90,7 +88,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                refresh(true);
+                if(heatmap != null) {
+                    refreshData();
+                }
             }
         });
         final Button btnToggleMapOverlay = (Button) findViewById(R.id.toggleMapOverlay);
@@ -105,7 +105,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean showGrid) {
                 heatmap.setGridVisible(showGrid);
-                refresh(false);
+                if(heatmap != null) {
+                    heatmap.refresh(true);
+                }
             }
         });
         seekbarAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -164,12 +166,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             switchGrid.setVisibility(View.INVISIBLE);
             seekbarAlpha.setVisibility(View.INVISIBLE);
         }
-        refresh(false);
+        heatmap.setOverlayType(overlayType);
+        heatmap.refresh(false);
     }
 
-    private void refresh(boolean fullRefresh) {
+    private void refreshData() {
         if(heatmap != null) {
-            heatmap.refresh(overlayType, fullRefresh);
+            heatmap.requestSamplesForVisibleArea();
         }
     }
 
@@ -183,29 +186,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
+        // TODO
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
-
-        heatmap = new HeatMap(map, getAlpha(), this);
-        String apiUrl = "http://noisemaprestapi.azurewebsites.net/api/Sample";
-        StringRequest apiRequest = RestCallFactory.createGetRequest(apiUrl,accessToken, this);
-        requestQueue.add(apiRequest);
+        heatmap = new HeatMap(map, getAlpha(), accessToken, this);
+        heatmap.requestSamplesForVisibleArea();
     }
 
-    @Override
-    public void onMapLoaded() {
-
-    }
-    @Override
-    public void onRequestResponseCallback(JSONObject response) {
-        boolean success = heatmap.parseSamples(response);
-        if(success) {
-            refresh(true);
-        } else {
-            Toast.makeText(this,"Error parsing the JSON sample response",Toast.LENGTH_LONG).show();
-
-        }
-
-    }
     private double getAlpha() {
         return seekbarAlpha.getProgress()/100.0d;
     }

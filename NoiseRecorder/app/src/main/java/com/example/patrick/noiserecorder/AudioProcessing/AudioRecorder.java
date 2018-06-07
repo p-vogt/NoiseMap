@@ -103,14 +103,12 @@ public class AudioRecorder {
     public void stopRecording() {
         if(isRecording) {
             if(audioRecorder != null) {
-
                 audioRecorder.stop();
                 audioRecorder.release();
             }
             isRecording = false;
         }
     }
-
 
     /**
      * Returns the last calculated average dBA value.

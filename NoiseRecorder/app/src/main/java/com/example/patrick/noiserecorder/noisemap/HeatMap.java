@@ -6,7 +6,13 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.widget.Toast;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.example.patrick.noiserecorder.Config;
 import com.example.patrick.noiserecorder.MapsActivity;
+import com.example.patrick.noiserecorder.network.OnRequestResponseCallback;
+import com.example.patrick.noiserecorder.network.RestCallFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Polygon;
@@ -22,27 +28,69 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 
 
-public class HeatMap {
+public class HeatMap implements OnRequestResponseCallback {
+    @Override
+    public void onRequestResponseCallback(JSONObject response) {
+        boolean success = parseSamples(response);
+        if(success) {
+            refresh(true);
+        } else {
+            Toast.makeText(activity,"Error parsing the JSON sample response",Toast.LENGTH_LONG).show();
+
+        }
+    }
+    public void requestSamplesForVisibleArea() {
+        LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
+        LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
+
+        double latitudeStart = southWestVisible.latitude;
+        double latitudeEnd = northEastVisible.latitude;
+
+        double longitudeStart = southWestVisible.longitude;
+        double longitudeEnd = northEastVisible.longitude;
+        String apiUrl = Config.API_BASE_URL + "Sample";
+        apiUrl += "?latitudeStart=" + latitudeStart;
+        apiUrl += "&latitudeEnd=" + latitudeEnd;
+        apiUrl += "&longitudeStart=" + longitudeStart;
+        apiUrl += "&longitudeEnd=" + longitudeEnd;
+        StringRequest apiRequest = RestCallFactory.createGetRequest(apiUrl,accessToken, this);
+        requestQueue.add(apiRequest);
+    }
+
     public enum OverlayType {
         OVERLAY_TILES,
         OVERLAY_HEATMAP
     }
+
+    private MapsActivity activity;
+    private RequestQueue requestQueue;
     private boolean isGridVisible = false;
     //TODO
     final int DIRECTION_NORTHEAST = 45;
     final int DIRECTION_SOUTHEAST = DIRECTION_NORTHEAST + 90;
     final int DIRECTION_SOUTHWEST = DIRECTION_SOUTHEAST + 90;
     final int DIRECTION_NORTHWEST = DIRECTION_SOUTHWEST + 90;
+    private OverlayType overlayType = OverlayType.OVERLAY_TILES;
+
+    public void setOverlayType(OverlayType overlayType) {
+        this.overlayType = overlayType;
+    }
+
+    private String accessToken;
     private double alpha;
     private final GoogleMap map;
 
-    public HeatMap(GoogleMap map, double initAlpha, final MapsActivity activity) {
+    public HeatMap(GoogleMap map, double initAlpha, String accessToken, final MapsActivity activity) {
         this.map = map;
         alpha = initAlpha;
+        this.accessToken = accessToken;
+        this.activity = activity;
+        requestQueue = Volley.newRequestQueue(activity);
 
         map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
             public void onPolygonClick(final Polygon polygon) {
@@ -109,6 +157,7 @@ public class HeatMap {
     }
 
     public boolean parseSamples(JSONObject json) {
+        samples.clear();
         JSONArray sampleArray;
         try {
             sampleArray = (JSONArray) json.get("samples");
@@ -180,7 +229,8 @@ public class HeatMap {
     }
     static int refreshCounter = 0;
     //TODO refactor
-    public void refresh(OverlayType overlayType, boolean fullRefresh) {
+    public void refresh(boolean fullRefresh) {
+
         map.clear(); // TODO check: does this clear the onClickListener for the polygons?
         refreshCounter++;
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
@@ -241,11 +291,9 @@ public class HeatMap {
 
                     }
 
-                    // Draw tiles if the tiles overlay is selected
-                    if (overlayType == OverlayType.OVERLAY_TILES) {
-                        PolygonOptions polyOptions = createPolygonOptions(radius, center, meanNoise, normalizedNoise, alpha);
-                        cachedPolygonOptions.add(polyOptions);
-                    }
+                    // add tiles
+                    PolygonOptions polyOptions = createPolygonOptions(radius, center, meanNoise, normalizedNoise, alpha);
+                    cachedPolygonOptions.add(polyOptions);
                 }
             }
         }

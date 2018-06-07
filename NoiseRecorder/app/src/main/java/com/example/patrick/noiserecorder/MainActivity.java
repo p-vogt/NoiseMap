@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         boolean offline_mode = switchOfflineMode.isChecked();
         if(!offline_mode) {
             //TODO move
-            String SERVER_API_URL = "http://noisemaprestapi.azurewebsites.net/api/"; // TODO HTTPS
+            String SERVER_API_URL = Config.API_BASE_URL; // TODO HTTPS
             String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
             JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
             requestQueue.add(postSample);

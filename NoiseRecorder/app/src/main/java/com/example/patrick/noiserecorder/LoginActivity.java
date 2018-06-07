@@ -357,7 +357,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      */
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
         private static final String TAG = "UserLoginTask";
-        private final String TOKEN_URL = "http://noisemaprestapi.azurewebsites.net/token";
+        private final String TOKEN_URL = Config.HOST_BASE_URL + "token";
         private final String email;
         private final String password;
 

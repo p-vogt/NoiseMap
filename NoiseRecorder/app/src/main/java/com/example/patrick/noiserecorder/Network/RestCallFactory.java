@@ -31,15 +31,20 @@ import java.util.Map;
 
 public final class RestCallFactory {
 
-    public static StringRequest createGetRequest(final String url, final String accessToken, final MapsActivity activity) {
+    public static StringRequest createGetRequest(final String url, final String accessToken, final OnRequestResponseCallback caller) {
         return new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
                         JSONObject resp;
                         try {
-                            resp = new JSONObject(response);
-                            activity.onRequestResponseCallback(resp);
+                            if(response.equals("[]")) {
+                                caller.onRequestResponseCallback(new JSONObject());
+                            } else {
+                                resp = new JSONObject(response);
+                                caller.onRequestResponseCallback(resp);
+                            }
+
                         } catch (JSONException e) {
                             e.printStackTrace();
                             // TODO invalid response
@@ -64,7 +69,6 @@ public final class RestCallFactory {
                     return;
 
                 }
-                //mPasswordView.setError(errorMsg); //TODO
 
             }
         })
