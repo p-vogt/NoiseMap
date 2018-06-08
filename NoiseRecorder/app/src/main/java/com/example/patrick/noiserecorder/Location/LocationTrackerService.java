@@ -13,6 +13,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -22,10 +23,15 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LocationTrackerService extends Service implements ServiceConnection {
 
@@ -40,7 +46,13 @@ public class LocationTrackerService extends Service implements ServiceConnection
     private LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult locationResult) {
-            //logPosition();
+            Location newLocation = null;
+            List<Location> locations = locationResult.getLocations();
+            if(locations != null && locations.size() > 0) {
+                newLocation = locations.get(0);
+                Log.d("locationCallback", "currentLocation: " + currentLocation);
+            }
+            emitLocation(newLocation);
         }
     };
 
@@ -55,12 +67,7 @@ public class LocationTrackerService extends Service implements ServiceConnection
             switch (msg.what) {
                 case MSG_REQUEST_LOCATION:
                     try {
-                        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
-                            @Override
-                            public void onSuccess(Location location) {
-                                emitLocation(location);
-                            }
-                        });
+                        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
                     } catch (SecurityException ex) {
                         // TODO
                         Log.e("IncomingHandler", ex.getMessage());
@@ -73,7 +80,10 @@ public class LocationTrackerService extends Service implements ServiceConnection
         }
     }
     private void emitLocation(Location location) {
-        currentLocation = location;
+        if(location != null) {
+            currentLocation = location;
+        }
+
         if (currentLocation != null) {
 
             JSONObject obj = new JSONObject();
@@ -87,7 +97,7 @@ public class LocationTrackerService extends Service implements ServiceConnection
                 obj.put("provider", currentLocation.getProvider());
                 obj.put("time", currentLocation.getTime());
             } catch (JSONException e) {
-                e.printStackTrace(); // TODO
+                //e.printStackTrace(); // TODO
             }
             // TODO
 
@@ -156,8 +166,8 @@ public class LocationTrackerService extends Service implements ServiceConnection
     }
 
     private Location currentLocation;
-    private static final long INTERVAL = 1000 * 10;
-    private static final long FASTEST_INTERVAL = 1000 * 5;
+    private static final long INTERVAL = 1000 * 5;
+    private static final long FASTEST_INTERVAL = 1000 * 3;
     private LocationRequest locationRequest;
 
     private FusedLocationProviderClient fusedLocationProviderClient;
