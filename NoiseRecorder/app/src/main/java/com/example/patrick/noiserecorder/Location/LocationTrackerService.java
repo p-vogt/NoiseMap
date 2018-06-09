@@ -112,6 +112,7 @@ public class LocationTrackerService extends Service implements ServiceConnection
                 currentLocation = location;
             }
         });
+        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
         return messenger.getBinder();
     }
 
