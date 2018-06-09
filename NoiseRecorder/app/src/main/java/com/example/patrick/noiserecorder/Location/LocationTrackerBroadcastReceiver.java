@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 
 import com.example.patrick.noiserecorder.audioprocessing.AudioRecorder;
 import com.example.patrick.noiserecorder.MainActivity;
@@ -26,26 +27,18 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        JSONObject jsonBody = getJSONLocationMessageFromIntent(intent);
+        Location curLocation = getLocation(intent);
+        JSONObject jsonBody = getJsonBody(curLocation);
         if(jsonBody.length() > 0) {
             callingActivity.postNewSample(jsonBody);
+            callingActivity.onNewMeasurementDone(jsonBody);
         }
     }
 
-    private JSONObject getJSONLocationMessageFromIntent(Intent intent) {
+    private JSONObject getJsonBody(Location location) {
 
         JSONObject jsonBody = new JSONObject();
-        Location curLocation = null;
-        Bundle extras = intent.getExtras();
-        if (intent.hasExtra("location")) {
-
-            Object locationObject = extras.get("location");
-            if(locationObject instanceof Location) {
-                curLocation = (Location) locationObject;
-            }
-        }
-
-        if(curLocation != null) {
+        if(location != null) {
             Calendar calendar = Calendar.getInstance();
             SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             String timestamp = timestampFormat.format(calendar.getTime());
@@ -57,10 +50,10 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
                 }
                 jsonBody.put("timestamp", timestamp);
                 jsonBody.put("noiseValue", lastAverageDb);
-                jsonBody.put("longitude", curLocation.getLongitude());
-                jsonBody.put("latitude",curLocation.getLatitude());
-                jsonBody.put("accuracy", curLocation.getAccuracy());
-                jsonBody.put("speed", curLocation.getSpeed());
+                jsonBody.put("longitude", location.getLongitude());
+                jsonBody.put("latitude",location.getLatitude());
+                jsonBody.put("accuracy", location.getAccuracy());
+                jsonBody.put("speed", location.getSpeed());
                 jsonBody.put("version", "AAAAAAAAB9g="); // TODO ??
                 jsonBody.put("createdAt", timestamp);
                 jsonBody.put("updatedAt", timestamp);
@@ -69,5 +62,19 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
             } catch (JSONException e) {}
         }
         return jsonBody;
+    }
+
+    @Nullable
+    private Location getLocation(Intent intent) {
+        Location curLocation = null;
+        Bundle extras = intent.getExtras();
+        if (intent.hasExtra("location")) {
+
+            Object locationObject = extras.get("location");
+            if(locationObject instanceof Location) {
+                curLocation = (Location) locationObject;
+            }
+        }
+        return curLocation;
     }
 }

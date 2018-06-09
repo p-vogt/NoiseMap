@@ -79,11 +79,11 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Gets called by the AudioRecorder when a whole measurement finished.
-     * @param newMeanDBA Mean value of the noise in dBA.
+     * @param jsonSample JSONObject that contains the sample data.
      */
-    public void onNewMeasurementDone(double newMeanDBA) {
+    public void onNewMeasurementDone(JSONObject jsonSample) {
         // plot output TODO move and change output
-        String dbOutput = "" + newMeanDBA;
+        String dbOutput = "" + jsonSample;
         adapter.insert(dbOutput,0);
         adapter.notifyDataSetChanged();
     }
