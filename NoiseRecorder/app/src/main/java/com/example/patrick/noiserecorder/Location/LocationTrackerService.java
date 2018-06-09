@@ -1,6 +1,7 @@
 package com.example.patrick.noiserecorder.location;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -39,20 +40,22 @@ public class LocationTrackerService extends Service implements ServiceConnection
     static final int MSG_REQUEST_LOCATION = 1;
 
     public LocationTrackerService() {
+
         createLocationRequest();
     }
-
 
     private LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult locationResult) {
             Location newLocation = null;
             List<Location> locations = locationResult.getLocations();
-            if(locations != null && locations.size() > 0) {
+            if (locations != null && locations.size() > 0) {
                 newLocation = locations.get(0);
                 Log.d("locationCallback", "currentLocation: " + currentLocation);
             }
-            emitLocation(newLocation);
+            if (newLocation != null) {
+                currentLocation = newLocation;
+            }
         }
     };
 
@@ -66,44 +69,20 @@ public class LocationTrackerService extends Service implements ServiceConnection
 
             switch (msg.what) {
                 case MSG_REQUEST_LOCATION:
-                    try {
-                        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
-                    } catch (SecurityException ex) {
-                        // TODO
-                        Log.e("IncomingHandler", ex.getMessage());
-                    }
-
+                    emitLocation(); // Send currentLocation to the caller
                     break;
                 default:
                     super.handleMessage(msg);
             }
         }
     }
-    private void emitLocation(Location location) {
-        if(location != null) {
-            currentLocation = location;
-        }
 
+    private void emitLocation() {
         if (currentLocation != null) {
-
-            JSONObject obj = new JSONObject();
-
-            try {
-                obj.put("accuracy", currentLocation.getAccuracy());
-                obj.put("longitude", currentLocation.getLongitude());
-                obj.put("latitude", currentLocation.getLatitude());
-                obj.put("altitude", currentLocation.getAltitude());
-                obj.put("speed", currentLocation.getSpeed());
-                obj.put("provider", currentLocation.getProvider());
-                obj.put("time", currentLocation.getTime());
-            } catch (JSONException e) {
-                //e.printStackTrace(); // TODO
-            }
-            // TODO
 
             Log.d("sender", "emitting location");
             Intent intent = new Intent("new-location");
-            intent.putExtra("message", obj.toString());
+            intent.putExtra("location", currentLocation);
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         }
     }
@@ -114,28 +93,25 @@ public class LocationTrackerService extends Service implements ServiceConnection
      */
     final Messenger messenger = new Messenger(new IncomingHandler());
 
-    private final IBinder binder = new  LocationTrackerBinder();
+    private final IBinder binder = new LocationTrackerBinder();
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         return Service.START_NOT_STICKY;
     }
+
+    // Gets checked before
+    @SuppressLint("MissingPermission")
     @Override
     public IBinder onBind(Intent intent) {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return null;
-        }
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
-
+        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+                currentLocation = location;
+            }
+        });
         return messenger.getBinder();
     }
 

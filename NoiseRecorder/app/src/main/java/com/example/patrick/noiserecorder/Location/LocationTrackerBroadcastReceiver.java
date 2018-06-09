@@ -3,6 +3,8 @@ package com.example.patrick.noiserecorder.location;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.location.Location;
+import android.os.Bundle;
 
 import com.example.patrick.noiserecorder.audioprocessing.AudioRecorder;
 import com.example.patrick.noiserecorder.MainActivity;
@@ -25,61 +27,46 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         JSONObject jsonBody = getJSONLocationMessageFromIntent(intent);
-        callingActivity.postNewSample(jsonBody);
+        if(jsonBody.length() > 0) {
+            callingActivity.postNewSample(jsonBody);
+        }
     }
 
     private JSONObject getJSONLocationMessageFromIntent(Intent intent) {
-        JSONObject message;
-        try {
-            message = new JSONObject(intent.getStringExtra("message"));
-        } catch (JSONException e) {
-            e.printStackTrace(); // TODO
-            return new JSONObject();
-        }
-        // TODO use time offset from location
-        Calendar calendar = Calendar.getInstance();
-        SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        String timestamp = timestampFormat.format(calendar.getTime());
-        double speed = -1.0d;
-        double longitude = -1.0d;
-        double latitude = -1.0d;
-        double accuracy = -1.0d;
-        try {
-            longitude = message.getDouble("longitude");
-        } catch (JSONException e) { }
-        try {
-            latitude = message.getDouble("latitude");
-        } catch (JSONException e) { }
-        try {
-            accuracy = message.getDouble("accuracy");
-        } catch (JSONException e) { }
-        try {
-            speed = message.getDouble("speed");
-        } catch (JSONException e) { }
 
-        if(speed == -1.0d ||longitude == -1.0d ||latitude == -1.0d ||accuracy == -1.0d ) {
-            int i = 0;
-        }
         JSONObject jsonBody = new JSONObject();
-        try {
-            double lastAverageDb = this.recording.getLastAverageDb();
-            if(Double.isNaN(lastAverageDb)) {
-                lastAverageDb = -1.0d;
+        Location curLocation = null;
+        Bundle extras = intent.getExtras();
+        if (intent.hasExtra("location")) {
+
+            Object locationObject = extras.get("location");
+            if(locationObject instanceof Location) {
+                curLocation = (Location) locationObject;
             }
-            jsonBody.put("timestamp", timestamp);
-            jsonBody.put("noiseValue", lastAverageDb);
-            jsonBody.put("longitude", longitude);
-            jsonBody.put("latitude",latitude);
-            jsonBody.put("accuracy", accuracy);
-            jsonBody.put("speed", speed);
-            jsonBody.put("version", "AAAAAAAAB9g="); // TODO ??
-            jsonBody.put("createdAt", timestamp);
-            jsonBody.put("updatedAt", timestamp);
-            jsonBody.put("deleted", false);
+        }
 
-        } catch (JSONException e) {
+        if(curLocation != null) {
+            Calendar calendar = Calendar.getInstance();
+            SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            String timestamp = timestampFormat.format(calendar.getTime());
 
-            return new JSONObject(); //TODO
+            try {
+                double lastAverageDb = this.recording.getLastAverageDb();
+                if(Double.isNaN(lastAverageDb)) {
+                    lastAverageDb = -1.0d;
+                }
+                jsonBody.put("timestamp", timestamp);
+                jsonBody.put("noiseValue", lastAverageDb);
+                jsonBody.put("longitude", curLocation.getLongitude());
+                jsonBody.put("latitude",curLocation.getLatitude());
+                jsonBody.put("accuracy", curLocation.getAccuracy());
+                jsonBody.put("speed", curLocation.getSpeed());
+                jsonBody.put("version", "AAAAAAAAB9g="); // TODO ??
+                jsonBody.put("createdAt", timestamp);
+                jsonBody.put("updatedAt", timestamp);
+                jsonBody.put("deleted", false);
+
+            } catch (JSONException e) {}
         }
         return jsonBody;
     }

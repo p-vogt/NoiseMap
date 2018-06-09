@@ -133,7 +133,7 @@ public class AudioRecorder {
         startNewRecording = true;
         lastAverageDb = fft.finishProcess();
         this.serviceConnection.requestLocation();
-        callingActivity.onNewMeasurementDone(this.lastAverageDb);
+        //callingActivity.onNewMeasurementDone(this.lastAverageDb);
     }
 
 }
