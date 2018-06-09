@@ -2,13 +2,18 @@ package com.example.patrick.noiserecorder.location;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -17,8 +22,11 @@ import android.os.Messenger;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.text.TextUtils;
 import android.util.Log;
 
+import com.example.patrick.noiserecorder.LoginActivity;
+import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -38,7 +46,22 @@ public class LocationTrackerService extends Service implements ServiceConnection
 
 
     static final int MSG_REQUEST_LOCATION = 1;
+    private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String LOCATION_EXTRA_NAME = "com.google.android.location.LOCATION";
+            if(intent.hasExtra(LOCATION_EXTRA_NAME)) {
+                Object locObject = intent.getExtras().get(LOCATION_EXTRA_NAME);
 
+                if(locObject instanceof Location) {
+                    currentLocation = (Location) locObject;
+                    Log.d("LocationTrackerService", "New Location: " + currentLocation);
+                }
+
+            }
+
+        }
+    };
     public LocationTrackerService() {
 
         createLocationRequest();
@@ -58,7 +81,6 @@ public class LocationTrackerService extends Service implements ServiceConnection
             }
         }
     };
-
 
     /**
      * Handler of incoming messages from clients.
@@ -83,6 +105,7 @@ public class LocationTrackerService extends Service implements ServiceConnection
             Log.d("sender", "emitting location");
             Intent intent = new Intent("new-location");
             intent.putExtra("location", currentLocation);
+            intent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         }
     }
@@ -98,7 +121,7 @@ public class LocationTrackerService extends Service implements ServiceConnection
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        return Service.START_NOT_STICKY;
+        return Service.START_REDELIVER_INTENT;
     }
 
     // Gets checked before
@@ -112,7 +135,13 @@ public class LocationTrackerService extends Service implements ServiceConnection
                 currentLocation = location;
             }
         });
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+        String actionName = "location-update";
+        IntentFilter filter = new IntentFilter(actionName);
+        registerReceiver(messageReceiver, filter);
+        Intent intentLocation = new Intent(actionName);
+        PendingIntent locationUpdateIntent = PendingIntent.getBroadcast(this, 0,
+                intentLocation, PendingIntent.FLAG_CANCEL_CURRENT);
+        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationUpdateIntent);
         return messenger.getBinder();
     }
 
@@ -152,6 +181,7 @@ public class LocationTrackerService extends Service implements ServiceConnection
     protected void createLocationRequest() {
         locationRequest = new LocationRequest();
         locationRequest.setInterval(INTERVAL);
+        locationRequest.setSmallestDisplacement(0);
         locationRequest.setFastestInterval(FASTEST_INTERVAL);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
