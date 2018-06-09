@@ -30,7 +30,6 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
         Location curLocation = getLocation(intent);
         JSONObject jsonBody = getJsonBody(curLocation);
         if(jsonBody.length() > 0) {
-            callingActivity.postNewSample(jsonBody);
             callingActivity.onNewMeasurementDone(jsonBody);
         }
     }

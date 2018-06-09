@@ -83,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void onNewMeasurementDone(JSONObject jsonSample) {
         // plot output TODO move and change output
+        postNewSample(jsonSample);
         String dbOutput = "" + jsonSample;
         adapter.insert(dbOutput,0);
         adapter.notifyDataSetChanged();
@@ -92,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
      * Sends a POST request to the rest api. Adds the sample to the database.
      * @param sampleBody JSONObject that contains the sample values.
      */
-    public void postNewSample(JSONObject sampleBody) {
+    private void postNewSample(JSONObject sampleBody) {
 
         boolean offline_mode = switchOfflineMode.isChecked();
         if(!offline_mode) {
