@@ -1,15 +1,18 @@
 package com.example.patrick.noiserecorder;
 
 import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
@@ -28,11 +31,11 @@ import com.example.patrick.noiserecorder.audioprocessing.AudioRecorder;
 import com.example.patrick.noiserecorder.location.LocationTrackerBroadcastReceiver;
 import com.example.patrick.noiserecorder.network.RestCallFactory;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
-
     private static final String TAG = "MainActivity";
     final ArrayList<String> listItems = new ArrayList<>();
     ArrayAdapter<String> adapter;
@@ -82,10 +85,25 @@ public class MainActivity extends AppCompatActivity {
      * @param jsonSample JSONObject that contains the sample data.
      */
     public void onNewMeasurementDone(JSONObject jsonSample) {
-        // plot output TODO move and change output
-        postNewSample(jsonSample);
+
+        boolean offline_mode = switchOfflineMode.isChecked();
+        boolean isRecording = audioRecorder.isRecording();
+        try {
+            if(!jsonSample.isNull("noiseValue")) {
+                if(jsonSample.getDouble("noiseValue") > 0.0d) {
+
+                }
+            }
+            if(!offline_mode && isRecording) {
+                postNewSample(jsonSample);
+            }
+        } catch(JSONException ex) {
+            Log.d("onNewMeasurementDone","invalid noise value");
+        }
+
         String dbOutput = "" + jsonSample;
-        adapter.insert(dbOutput,0);
+        // plot output TODO move and change output
+        adapter.insert(dbOutput, 0);
         adapter.notifyDataSetChanged();
     }
 
@@ -94,15 +112,11 @@ public class MainActivity extends AppCompatActivity {
      * @param sampleBody JSONObject that contains the sample values.
      */
     private void postNewSample(JSONObject sampleBody) {
-
-        boolean offline_mode = switchOfflineMode.isChecked();
-        if(!offline_mode) {
-            //TODO move
-            String SERVER_API_URL = Config.API_BASE_URL; // TODO HTTPS
-            String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
-            JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
-            requestQueue.add(postSample);
-        }
+        //TODO move
+        String SERVER_API_URL = Config.API_BASE_URL; // TODO HTTPS
+        String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
+        JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
+        requestQueue.add(postSample);
     }
 
     @Override
@@ -110,7 +124,6 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); //TODO
 
         Bundle b = getIntent().getExtras();
         if (b != null) {
@@ -152,14 +165,19 @@ public class MainActivity extends AppCompatActivity {
                     audioRecorder.stopRecording();
                     btnStartStop.setText("Start");
                     btnStartStop.setBackgroundColor(Color.parseColor("#33cc33"));
+
                 } else {
                     audioRecorder.startRecording();
                     btnStartStop.setText("Stop");
                     btnStartStop.setBackgroundColor(Color.parseColor("#cc0000"));
+                    //TODO
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     if(switchOfflineMode.isChecked()) {
                         Toast.makeText(MainActivity.this,"!!!OFFLINE MODE ACTIVATED!!!",Toast.LENGTH_LONG).show();
                         btnStartStop.setText("OFFLINE");
                         btnStartStop.setBackgroundColor(Color.parseColor("#ffff00"));
+                        //TODO
+                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     }
                 }
             }
