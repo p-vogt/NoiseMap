@@ -38,12 +38,10 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
 
         JSONObject jsonBody = new JSONObject();
         if(location != null) {
-            Calendar calendar = Calendar.getInstance();
-            SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            String timestamp = timestampFormat.format(calendar.getTime());
+            String timestamp = this.recording.getTimestampOfLastAverageDbA();
 
             try {
-                double lastAverageDb = this.recording.getLastAverageDb();
+                double lastAverageDb = this.recording.getLastAverageDbA();
                 if(Double.isNaN(lastAverageDb)) {
                     lastAverageDb = -1.0d;
                 }

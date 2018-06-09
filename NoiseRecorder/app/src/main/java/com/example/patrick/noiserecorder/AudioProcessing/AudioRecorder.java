@@ -10,12 +10,13 @@ import com.example.patrick.noiserecorder.location.LocationServiceConnection;
 import com.example.patrick.noiserecorder.location.LocationTrackerService;
 import com.example.patrick.noiserecorder.MainActivity;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 public class AudioRecorder {
 
     private AudioProcessor fft = new AudioProcessor();
-    private double lastAverageDb = -1.0d;
+    private double lastAverageDbA = -1.0d;
     boolean isRecording = false;
     private long timeStartedRecordingInMs;
     private LocationServiceConnection serviceConnection = new LocationServiceConnection();
@@ -24,6 +25,7 @@ public class AudioRecorder {
     MainActivity callingActivity;
 
     AudioRecord audioRecorder;
+    private String timestampOfLastAverageDbA = "";
 
     public AudioRecorder(MainActivity caller) {
         this.callingActivity = caller;
@@ -114,10 +116,13 @@ public class AudioRecorder {
      * Returns the last calculated average dBA value.
      * @return the last calculated average dBA value.
      */
-    public double getLastAverageDb() {
-        return lastAverageDb;
+    public double getLastAverageDbA() {
+        return lastAverageDbA;
     }
 
+    public String getTimestampOfLastAverageDbA() {
+        return timestampOfLastAverageDbA;
+    }
     /**
      * Finishes one measurement process (multiple FFTs).
      * Stops recording, calculates the average dBA and triggers a location request.
@@ -129,9 +134,13 @@ public class AudioRecorder {
             audioRecorder.release();
             audioRecorder = null;
         }
-
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        String timestamp = timestampFormat.format(calendar.getTime());
         startNewRecording = true;
-        lastAverageDb = fft.finishProcess();
+
+        this.timestampOfLastAverageDbA = timestamp;
+                lastAverageDbA = fft.finishProcess();
         this.serviceConnection.requestLocation();
         //callingActivity.onNewMeasurementDone(this.lastAverageDb);
     }
