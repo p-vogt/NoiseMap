@@ -130,13 +130,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         Spinner spinnerMapType = (Spinner) findViewById(R.id.mapTypeSpinner);
         spinnerMapType.setBackgroundResource(android.R.drawable.btn_dropdown);
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
         list.add("Normal");
         list.add("Satellit");
         list.add("Terrain");
         list.add("Hybrid");
-
-        ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
+        ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, list);
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerMapType.setAdapter(dataAdapter);
@@ -153,6 +152,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         });
+
+
+        Spinner spinnerWeekdayFilter = (Spinner) findViewById(R.id.weekdayFilterSpinner);
+        spinnerWeekdayFilter.setBackgroundResource(android.R.drawable.btn_dropdown);
+        final List<String> filterList = new ArrayList<>();
+        filterList.add("No Filter");
+        filterList.add("Mo");
+        filterList.add("Tue");
+        filterList.add("Wed");
+        filterList.add("Thu");
+        filterList.add("Fri");
+        filterList.add("Sa");
+        filterList.add("Sun");
+
+        ArrayAdapter<String> filterDataAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, filterList);
+        filterDataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerWeekdayFilter.setAdapter(filterDataAdapter);
+        spinnerWeekdayFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if(heatmap != null) {
+                    heatmap.setWeekdayFilter(filterList.get(position));
+                    heatmap.refresh(true);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
 
     }
 

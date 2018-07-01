@@ -74,6 +74,17 @@
                 android:paddingLeft="8dp">
 
                 <Spinner
+                    android:id="@+id/weekdayFilterSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_gravity="center"
+                    android:layout_marginLeft="5dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:spinnerMode="dropdown" />
+
+                <Spinner
                     android:id="@+id/mapTypeSpinner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

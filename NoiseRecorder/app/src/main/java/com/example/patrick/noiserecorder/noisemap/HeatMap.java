@@ -33,7 +33,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -76,6 +75,7 @@ public class HeatMap implements OnRequestResponseCallback {
     private MapsActivity activity;
     private RequestQueue requestQueue;
     private boolean isGridVisible = false;
+    private String weekdayFilter = "";
     private TileOverlay heatmapOverlay;
     HeatmapTileProvider provider;
     //TODO
@@ -173,11 +173,18 @@ public class HeatMap implements OnRequestResponseCallback {
             // check if value is in visible area
             LatLng curPos = sample.position;
             if(map.getProjection().getVisibleRegion().latLngBounds.contains(curPos)) {
-                // calculate matrix indices
-                // Index = floor[(Value-FirstPositionValue)/offset]
-                int i = (int) Math.floor((curPos.latitude-northWestVisible.latitude)/offsetLat);
-                int j = (int) Math.floor((curPos.longitude-northWestVisible.longitude)/offsetLong);
-                noiseMatrix.get(i).get(j).add(sample.noise);
+
+                // check week day filter
+                String weekDayOfSample = new SimpleDateFormat("EE", Locale.ENGLISH).format(sample.timestamp.getTime());
+                if(weekdayFilter.equals("No Filter") || weekDayOfSample.equals(weekdayFilter)) {
+
+                    // calculate matrix indices
+                    // Index = floor[(Value-FirstPositionValue)/
+                    int i = (int) Math.floor((curPos.latitude-northWestVisible.latitude)/offsetLat);
+                    int j = (int) Math.floor((curPos.longitude-northWestVisible.longitude)/offsetLong);
+                    noiseMatrix.get(i).get(j).add(sample.noise);
+                }
+
             }
         }
     }
@@ -203,9 +210,15 @@ public class HeatMap implements OnRequestResponseCallback {
                                     if(!curObject.isNull(("timestamp"))) {
                                         String timestamp = curObject.getString("timestamp");
                                         DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss", Locale.ENGLISH);
-                                        Date date = format.parse(timestamp);
+                                        Date date;
+                                        try {
+                                            date = format.parse(timestamp);
+                                        } catch (ParseException e) {
+                                            // ignore sample since it is invalid
+                                            continue;
+                                        }
                                         LatLng position = new LatLng(latitude, longitude);
-                                        samples.add(new Sample(position, noise));
+                                        samples.add(new Sample(position, noise, date));
                                     }
                                 }
                             }
@@ -213,7 +226,7 @@ public class HeatMap implements OnRequestResponseCallback {
                     }
                 }
             }
-        } catch (JSONException | ParseException e) {
+        } catch (JSONException e) {
 
             return false; // TODO invalid response
         }
@@ -306,7 +319,8 @@ public class HeatMap implements OnRequestResponseCallback {
                     double normalizedNoise = -1.0d;
                     if (fullRefresh) {
                         meanNoise = getMeanNoise(heightCounter, widthCounter);
-                        double max = 80.0d;
+                        // TODO configurable
+                        double max = 85.0d;
                         double min = 45.0d;
                         normalizedNoise = getNormalizedNoise(meanNoise, max, min);
                         WeightedLatLng curWLatLng = new WeightedLatLng(center, normalizedNoise);
@@ -336,18 +350,20 @@ public class HeatMap implements OnRequestResponseCallback {
                     }
 
                 }
-                provider = new HeatmapTileProvider.Builder()
-                        .weightedData(weightedSamples)
-                        .build();
+                if(weightedSamples.size() > 0) {
+                    provider = new HeatmapTileProvider.Builder()
+                            .weightedData(weightedSamples)
+                            .build();
 
-                // TODO own gradient?
-                // Create the gradient.
-                int[] colors = {
-                        Color.rgb(102, 225, 0), // green
-                        Color.rgb(255, 0, 0)    // red
-                };
+                    // TODO own gradient?
+                    // Create the gradient.
+                    int[] colors = {
+                            Color.rgb(102, 225, 0), // green
+                            Color.rgb(255, 0, 0)    // red
+                    };
 
-                heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+                    heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+                }
             }
         } else if(overlayType == OverlayType.OVERLAY_TILES) {
             int counter = 0;
@@ -432,7 +448,9 @@ public class HeatMap implements OnRequestResponseCallback {
     public void setGridVisible(boolean showGrid) {
         isGridVisible = showGrid;
     }
-
+    public void setWeekdayFilter(String weekday) {
+        weekdayFilter = weekday;
+    }
     public void setAlpha(double alpha) {
         // update polygons
         for(Polygon poly : polygons) {
