@@ -17,6 +17,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
@@ -26,11 +27,15 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-
+import java.util.Locale;
 
 
 public class HeatMap implements OnRequestResponseCallback {
@@ -62,6 +67,7 @@ public class HeatMap implements OnRequestResponseCallback {
         requestQueue.add(apiRequest);
     }
 
+
     public enum OverlayType {
         OVERLAY_TILES,
         OVERLAY_HEATMAP
@@ -70,6 +76,8 @@ public class HeatMap implements OnRequestResponseCallback {
     private MapsActivity activity;
     private RequestQueue requestQueue;
     private boolean isGridVisible = false;
+    private TileOverlay heatmapOverlay;
+    HeatmapTileProvider provider;
     //TODO
     final int DIRECTION_NORTHEAST = 45;
     final int DIRECTION_SOUTHEAST = DIRECTION_NORTHEAST + 90;
@@ -84,9 +92,27 @@ public class HeatMap implements OnRequestResponseCallback {
     private String accessToken;
     private double alpha;
     private final GoogleMap map;
-
-    public HeatMap(GoogleMap map, double initAlpha, String accessToken, final MapsActivity activity) {
+    private double prevZoom = 0;
+    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, final MapsActivity activity) {
         this.map = map;
+        map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+            @Override
+            public void onCameraMove() {
+                if(provider != null) {
+                    double curZoom = map.getCameraPosition().zoom;
+                    if(curZoom != prevZoom) {
+                        prevZoom = curZoom;
+                        int blurRadius = (int) (curZoom*4); // TODO
+                        if(blurRadius > 50) blurRadius = 50;
+                        else if(blurRadius < 10) blurRadius = 10;
+                        provider.setRadius(blurRadius);
+                        if(heatmapOverlay != null) {
+                            heatmapOverlay.clearTileCache();
+                        }
+                    }
+                }
+            }
+        });
         alpha = initAlpha;
         this.accessToken = accessToken;
         this.activity = activity;
@@ -174,18 +200,22 @@ public class HeatMap implements OnRequestResponseCallback {
                                 double latitude = curObject.getDouble("latitude");
                                 if(!curObject.isNull(("noiseValue"))) {
                                     double noise = curObject.getDouble("noiseValue");
-                                    LatLng position = new LatLng(latitude, longitude);
-                                    samples.add(new Sample(position, noise));
+                                    if(!curObject.isNull(("timestamp"))) {
+                                        String timestamp = curObject.getString("timestamp");
+                                        DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss", Locale.ENGLISH);
+                                        Date date = format.parse(timestamp);
+                                        LatLng position = new LatLng(latitude, longitude);
+                                        samples.add(new Sample(position, noise));
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            boolean breakpoint = true;
-        } catch (JSONException e) {
+        } catch (JSONException | ParseException e) {
 
-            return false; // TODO invalid json response
+            return false; // TODO invalid response
         }
         return true;
     }
@@ -288,7 +318,6 @@ public class HeatMap implements OnRequestResponseCallback {
                             normalizedNoise = cachedWeightedSamples.get(index).getIntensity();
                             meanNoise = cachedMeanNoise.get(index);
                         }
-
                     }
 
                     // add tiles
@@ -307,9 +336,8 @@ public class HeatMap implements OnRequestResponseCallback {
                     }
 
                 }
-                HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
+                provider = new HeatmapTileProvider.Builder()
                         .weightedData(weightedSamples)
-                        .radius(50)
                         .build();
 
                 // TODO own gradient?
@@ -319,7 +347,7 @@ public class HeatMap implements OnRequestResponseCallback {
                         Color.rgb(255, 0, 0)    // red
                 };
 
-                map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+                heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
             }
         } else if(overlayType == OverlayType.OVERLAY_TILES) {
             int counter = 0;
