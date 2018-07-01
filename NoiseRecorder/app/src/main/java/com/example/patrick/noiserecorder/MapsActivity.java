@@ -171,12 +171,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         filterDataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerWeekdayFilter.setAdapter(filterDataAdapter);
         spinnerWeekdayFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            boolean isFirstSelect = true;
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if(heatmap != null) {
                     heatmap.setWeekdayFilter(filterList.get(position));
-                    heatmap.refresh(true);
+                    if(!isFirstSelect) {
+                        heatmap.refresh(true);
+                    }
                 }
+                isFirstSelect = false;
             }
 
             @Override

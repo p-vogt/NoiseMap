@@ -98,18 +98,10 @@ public class HeatMap implements OnRequestResponseCallback {
         map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
             @Override
             public void onCameraMove() {
-                if(provider != null) {
-                    double curZoom = map.getCameraPosition().zoom;
-                    if(curZoom != prevZoom) {
-                        prevZoom = curZoom;
-                        int blurRadius = (int) (curZoom*4); // TODO
-                        if(blurRadius > 50) blurRadius = 50;
-                        else if(blurRadius < 10) blurRadius = 10;
-                        provider.setRadius(blurRadius);
-                        if(heatmapOverlay != null) {
-                            heatmapOverlay.clearTileCache();
-                        }
-                    }
+                double curZoom = map.getCameraPosition().zoom;
+                if(curZoom != prevZoom) {
+                    prevZoom = curZoom;
+                    calculateBlur(map);
                 }
             }
         });
@@ -130,6 +122,19 @@ public class HeatMap implements OnRequestResponseCallback {
                 addPolygonBorderAnimation(polygon);
             }
         });
+    }
+
+    private void calculateBlur(GoogleMap map) {
+        if(provider != null) {
+            double curZoom = map.getCameraPosition().zoom;
+            int blurRadius = (int) (curZoom*5); // TODO
+            if(blurRadius > 50) blurRadius = 50;
+            else if(blurRadius < 10) blurRadius = 10;
+            provider.setRadius(blurRadius);
+            if(heatmapOverlay != null) {
+                heatmapOverlay.clearTileCache();
+            }
+        }
     }
 
 
@@ -279,9 +284,8 @@ public class HeatMap implements OnRequestResponseCallback {
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
         LatLng northWestVisible = new LatLng(northEastVisible.latitude,southWestVisible.longitude);
-        int NUM_OF_TILES_WIDTH = 20; // TODO configurable
 
-        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / NUM_OF_TILES_WIDTH / 2;
+        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / Config.NUMBER_OF_TILES_WIDTH / 2;
         double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / (2*radius);
         LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
@@ -291,15 +295,8 @@ public class HeatMap implements OnRequestResponseCallback {
             cachedPolygonOptions.clear();
             cachedWeightedSamples.clear();
             cachedMeanNoise.clear();
-            initMatrix(NUM_OF_TILES_WIDTH, numOfRectsHeight);
+            initMatrix(Config.NUMBER_OF_TILES_WIDTH, numOfRectsHeight);
             clusterSamples(northWestVisible, offsetLong, offsetLat);
-
-
-            double lat1 = 52.0382444;
-            double long1 = 8.5257916;
-            LatLng bielefeld1 = new LatLng(lat1, long1);
-
-            LatLng bielefeld2 = new LatLng(52.0392444, 8.5257916);
 
             // run through the whole map grid (vertically)
             //  ^
@@ -310,7 +307,7 @@ public class HeatMap implements OnRequestResponseCallback {
                 //
                 // <--->
                 //
-                for (int widthCounter = 0; widthCounter < NUM_OF_TILES_WIDTH; widthCounter++) {
+                for (int widthCounter = 0; widthCounter < Config.NUMBER_OF_TILES_WIDTH; widthCounter++) {
 
                     LatLng center = new LatLng(start.latitude + heightCounter * offsetLat, start.longitude + widthCounter * offsetLong);
 
@@ -319,15 +316,14 @@ public class HeatMap implements OnRequestResponseCallback {
                     double normalizedNoise = -1.0d;
                     if (fullRefresh) {
                         meanNoise = getMeanNoise(heightCounter, widthCounter);
-                        // TODO configurable
-                        double max = 85.0d;
-                        double min = 45.0d;
+                        double max = Config.MAX_DB_NORMALIZED;
+                        double min = Config.MIN_DB_NORMALIZED;
                         normalizedNoise = getNormalizedNoise(meanNoise, max, min);
                         WeightedLatLng curWLatLng = new WeightedLatLng(center, normalizedNoise);
                         cachedWeightedSamples.add(curWLatLng);
                         cachedMeanNoise.add(meanNoise);
                     } else {
-                        int index = heightCounter * NUM_OF_TILES_WIDTH + widthCounter;
+                        int index = heightCounter * Config.NUMBER_OF_TILES_WIDTH + widthCounter;
                         if (index < cachedWeightedSamples.size()) {
                             normalizedNoise = cachedWeightedSamples.get(index).getIntensity();
                             meanNoise = cachedMeanNoise.get(index);
@@ -364,6 +360,7 @@ public class HeatMap implements OnRequestResponseCallback {
 
                     heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
                 }
+                calculateBlur(map);
             }
         } else if(overlayType == OverlayType.OVERLAY_TILES) {
             int counter = 0;
@@ -378,8 +375,21 @@ public class HeatMap implements OnRequestResponseCallback {
             }
         }
 
+        if( isNoisematrixEmpty()) {
+            Toast.makeText(activity,"No data!",Toast.LENGTH_LONG).show();
+        }
     }
+    private boolean isNoisematrixEmpty() {
+        for(int i = 0; i < noiseMatrix.size(); i++) {
+            for (int j = 0; j < noiseMatrix.get(i).size(); j++){
 
+                if(noiseMatrix.get(i).get(j).size() != 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
     private double getNormalizedNoise(double meanNoise, double max, double min) {
         double normalizedNoise = (meanNoise - min) * 1/(max-min);
         if(normalizedNoise > 1) {
