@@ -24,6 +24,14 @@
             android:defaultValue="true"
             android:key="noisemap_tiles_show_grid"
             android:title="Show grid" />
+        <ListPreference
+        android:defaultValue="180"
+        android:entries="@array/pref_noisemap_map_transparency"
+        android:entryValues="@array/pref_noisemap_map_transparency"
+        android:key="noisemap_tiles_transparency"
+        android:negativeButtonText="@null"
+        android:positiveButtonText="@null"
+        android:title="Tile transparency" />
     </PreferenceCategory>
     <PreferenceCategory android:title="Heat Map">
 

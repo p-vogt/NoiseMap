@@ -13,25 +13,14 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.SeekBar;
 import android.widget.Spinner;
-import android.widget.Switch;
-import android.widget.Toast;
 
-import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
-import com.example.patrick.noiserecorder.network.OnRequestResponseCallback;
-import com.example.patrick.noiserecorder.network.RestCallFactory;
 import com.example.patrick.noiserecorder.noisemap.HeatMap;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +55,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     };
     private GoogleMap map;
     private HeatMap heatmap;
-    private SeekBar seekbarAlpha;
 
     private HeatMap.OverlayType overlayType = HeatMap.OverlayType.OVERLAY_TILES;
     @Override
@@ -85,7 +73,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        seekbarAlpha= (SeekBar) findViewById(R.id.seekbarAlpha);
 
         final Button btnRefresh = (Button) findViewById(R.id.refresh_map);
         btnRefresh.setOnClickListener(new View.OnClickListener() {
@@ -101,23 +88,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View view) {
                 toggleMapOverlay();
-            }
-        });
-        seekbarAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                double a = progress/100.d;
-                heatmap.setAlpha(a);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
             }
         });
 
@@ -191,17 +161,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_map);
         setMapType();
         if(heatmap != null) {
+            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+            String transparency = sharedPref.getString("noisemap_tiles_transparency", "0.2");
             heatmap.refresh(false);
+            heatmap.setAlpha(1.0 - Float.parseFloat(transparency));
         }
 
     }
     private void toggleMapOverlay() {
         if(overlayType == HeatMap.OverlayType.OVERLAY_HEATMAP) {
             overlayType = HeatMap.OverlayType.OVERLAY_TILES;
-            seekbarAlpha.setVisibility(View.VISIBLE);
         } else {
             overlayType = HeatMap.OverlayType.OVERLAY_HEATMAP;
-            seekbarAlpha.setVisibility(View.INVISIBLE);
         }
         heatmap.setOverlayType(overlayType);
         heatmap.refresh(false);
@@ -222,15 +193,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        String transparency = sharedPref.getString("noisemap_tiles_transparency", "0.2");
         map = googleMap;
         setMapType();
         // TODO
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
-        heatmap = new HeatMap(map, getAlpha(), accessToken, this);
+        heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, this);
+        heatmap.setWeekdayFilter("No Filter");
         heatmap.requestSamplesForVisibleArea();
-    }
-
-    private double getAlpha() {
-        return seekbarAlpha.getProgress()/100.0d;
     }
 }

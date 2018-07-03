@@ -204,6 +204,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             setHasOptionsMenu(true);
 
             bindPreferenceSummaryToValue(findPreference("map_style"));
+            bindPreferenceSummaryToValue(findPreference("noisemap_tiles_transparency"));
         }
 
         @Override
