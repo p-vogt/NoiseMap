@@ -26,9 +26,9 @@
         </activity>
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation"
             android:label="@string/title_activity_main"
-            android:screenOrientation="portrait"
-            android:configChanges="orientation" />
+            android:screenOrientation="portrait" />
 
         <service
             android:name=".location.LocationTrackerService"
@@ -48,7 +48,10 @@
 
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps"></activity>
+            android:label="@string/title_activity_maps" />
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/title_activity_settings"></activity>
     </application>
 
 </manifest>

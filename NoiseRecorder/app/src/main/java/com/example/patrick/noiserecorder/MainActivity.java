@@ -1,5 +1,7 @@
 package com.example.patrick.noiserecorder;
 
+import android.arch.lifecycle.Lifecycle;
+import android.arch.lifecycle.OnLifecycleEvent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -40,7 +42,6 @@ public class MainActivity extends AppCompatActivity {
     final ArrayList<String> listItems = new ArrayList<>();
     ArrayAdapter<String> adapter;
     private AudioRecorder audioRecorder;
-    private TextView textMessage;
     private String accessToken;
     private RequestQueue requestQueue;
     private BroadcastReceiver messageReceiver;
@@ -56,16 +57,16 @@ public class MainActivity extends AppCompatActivity {
          */
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            Intent intent;
             switch (item.getItemId()) {
                 case R.id.navigation_home:
-                    textMessage.setText(R.string.title_home);
                     return true;
 
                 // open the navigation map
                 case R.id.navigation_map:
                     Bundle b = new Bundle();
                     // pass the accessToken to the new MapActivity
-                    Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+                    intent = new Intent(MainActivity.this, MapsActivity.class);
                     b.putString("accessToken", accessToken);
                     intent.putExtras(b);
 
@@ -73,7 +74,8 @@ public class MainActivity extends AppCompatActivity {
                     return true;
 
                 case R.id.navigation_notifications:
-                    textMessage.setText(R.string.title_notifications);
+                    intent = new Intent(MainActivity.this, SettingsActivity.class);
+                    startActivity(intent);
                     return true;
             }
             return false;
@@ -135,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
 
         initServices();
         requestQueue = Volley.newRequestQueue(this);
-        textMessage = (TextView) findViewById(R.id.message);
         switchOfflineMode = (Switch) findViewById(R.id.switchOfflineMode);
 
         SharedPreferences settings = getSharedPreferences("UserData", 0);
@@ -188,7 +189,11 @@ public class MainActivity extends AppCompatActivity {
         final ListView lView = findViewById(R.id.lViewPositions);
         lView.setAdapter(adapter);
     }
-
+    @Override
+    public void onResume() {
+        super.onResume();
+        ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_home);
+    }
     private void initServices() {
         audioRecorder = new AudioRecorder(this);
         messageReceiver = new LocationTrackerBroadcastReceiver(this, audioRecorder);

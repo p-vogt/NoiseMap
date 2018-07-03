@@ -41,11 +41,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            Intent intent;
             switch (item.getItemId()) {
                 case R.id.navigation_home:
                     Bundle b = new Bundle();
                     b.putString("accessToken", accessToken);
-                    Intent intent = new Intent(MapsActivity.this, MainActivity.class);
+                    intent = new Intent(MapsActivity.this, MainActivity.class);
                     intent.putExtras(b);
                     startActivity(intent);
                     return true;
@@ -53,7 +54,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     // do nothing
                     return true;
                 case R.id.navigation_notifications:
-
+                    intent = new Intent(MapsActivity.this, SettingsActivity.class);
+                    startActivity(intent);
                     return true;
             }
             return false;
@@ -191,7 +193,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     }
-
+    @Override
+    public void onResume() {
+        super.onResume();
+        ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_map);
+    }
     private void toggleMapOverlay() {
         if(overlayType == HeatMap.OverlayType.OVERLAY_HEATMAP) {
             overlayType = HeatMap.OverlayType.OVERLAY_TILES;
