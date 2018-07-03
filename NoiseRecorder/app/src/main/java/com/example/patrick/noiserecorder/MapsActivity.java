@@ -1,10 +1,13 @@
 package com.example.patrick.noiserecorder;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -130,32 +133,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        Spinner spinnerMapType = (Spinner) findViewById(R.id.mapTypeSpinner);
-        spinnerMapType.setBackgroundResource(android.R.drawable.btn_dropdown);
-        List<String> list = new ArrayList<>();
-        list.add("Normal");
-        list.add("Satellit");
-        list.add("Terrain");
-        list.add("Hybrid");
-        ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, list);
-        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerMapType.setAdapter(dataAdapter);
-        spinnerMapType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if(map != null) {
-                    map.setMapType((int)id+1);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-
         Spinner spinnerWeekdayFilter = (Spinner) findViewById(R.id.weekdayFilterSpinner);
         spinnerWeekdayFilter.setBackgroundResource(android.R.drawable.btn_dropdown);
         final List<String> filterList = new ArrayList<>();
@@ -193,10 +170,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     }
+    private void setMapType() {
+        if(map == null) {
+            return;
+        }
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        String mapStyle = sharedPref.getString("map_style", "");
+        int mapTypeId = 1;
+        switch (mapStyle) {
+            case "Normal":
+                mapTypeId = 1;
+                break;
+            case "Satellite":
+                mapTypeId = 2;
+                break;
+            case "Terrain":
+                mapTypeId = 3;
+                break;
+            case "Hybrid":
+                mapTypeId = 4;
+                break;
+            default:
+                Log.e("MapsActivitiy","Invalid Map Type: " + mapStyle);
+                break;
+        }
+        map.setMapType(mapTypeId);
+
+    }
     @Override
     public void onResume() {
         super.onResume();
         ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_map);
+        setMapType();
     }
     private void toggleMapOverlay() {
         if(overlayType == HeatMap.OverlayType.OVERLAY_HEATMAP) {
@@ -228,6 +233,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
+        setMapType();
         // TODO
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
         heatmap = new HeatMap(map, getAlpha(), accessToken, this);
