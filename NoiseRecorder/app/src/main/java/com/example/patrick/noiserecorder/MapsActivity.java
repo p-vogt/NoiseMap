@@ -66,7 +66,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     };
     private GoogleMap map;
     private HeatMap heatmap;
-    private Switch switchGrid;
     private SeekBar seekbarAlpha;
 
     private HeatMap.OverlayType overlayType = HeatMap.OverlayType.OVERLAY_TILES;
@@ -86,7 +85,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        switchGrid = (Switch) findViewById(R.id.switchGrid);
         seekbarAlpha= (SeekBar) findViewById(R.id.seekbarAlpha);
 
         final Button btnRefresh = (Button) findViewById(R.id.refresh_map);
@@ -103,16 +101,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View view) {
                 toggleMapOverlay();
-            }
-        });
-        final Switch switchGrid = (Switch) findViewById(R.id.switchGrid);
-        switchGrid.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean showGrid) {
-                heatmap.setGridVisible(showGrid);
-                if(heatmap != null) {
-                    heatmap.refresh(true);
-                }
             }
         });
         seekbarAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -202,15 +190,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onResume();
         ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_map);
         setMapType();
+        if(heatmap != null) {
+            heatmap.refresh(false);
+        }
+
     }
     private void toggleMapOverlay() {
         if(overlayType == HeatMap.OverlayType.OVERLAY_HEATMAP) {
             overlayType = HeatMap.OverlayType.OVERLAY_TILES;
-            switchGrid.setVisibility(View.VISIBLE);
             seekbarAlpha.setVisibility(View.VISIBLE);
         } else {
             overlayType = HeatMap.OverlayType.OVERLAY_HEATMAP;
-            switchGrid.setVisibility(View.INVISIBLE);
             seekbarAlpha.setVisibility(View.INVISIBLE);
         }
         heatmap.setOverlayType(overlayType);

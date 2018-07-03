@@ -48,16 +48,6 @@
                     android:paddingRight="10dp"
                     android:text="Refresh" />
 
-                <Switch
-                    android:id="@+id/switchGrid"
-                    android:layout_width="80dp"
-                    android:layout_height="30dp"
-                    android:layout_marginLeft="10dp"
-                    android:layout_marginTop="10dp"
-                    android:text="Grid"
-                    android:textOff="No"
-                    android:textOn="Yes" />
-
                 <SeekBar
                     android:id="@+id/seekbarAlpha"
                     android:layout_width="80dp"

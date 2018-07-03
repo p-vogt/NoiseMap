@@ -1,8 +1,10 @@
 package com.example.patrick.noiserecorder.noisemap;
 
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.widget.Toast;
 
@@ -74,7 +76,6 @@ public class HeatMap implements OnRequestResponseCallback {
 
     private MapsActivity activity;
     private RequestQueue requestQueue;
-    private boolean isGridVisible = false;
     private String weekdayFilter = "";
     private TileOverlay heatmapOverlay;
     HeatmapTileProvider provider;
@@ -278,6 +279,8 @@ public class HeatMap implements OnRequestResponseCallback {
     static int refreshCounter = 0;
     //TODO refactor
     public void refresh(boolean fullRefresh) {
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
+        boolean isGridVisible = sharedPref.getBoolean("noisemap_tiles_show_grid", false);
 
         map.clear(); // TODO check: does this clear the onClickListener for the polygons?
         refreshCounter++;
@@ -367,7 +370,7 @@ public class HeatMap implements OnRequestResponseCallback {
             polygons.clear();
             for(PolygonOptions option : cachedPolygonOptions) {
                 double meanNoise = cachedMeanNoise.get(counter);
-                if(this.isGridVisible || meanNoise > 0.0d) {
+                if(isGridVisible || meanNoise > 0.0d) {
                     Polygon poly = addPolygonToMap(meanNoise, option);
                     polygons.add(poly);
                 }
@@ -455,9 +458,6 @@ public class HeatMap implements OnRequestResponseCallback {
         return poly;
     }
 
-    public void setGridVisible(boolean showGrid) {
-        isGridVisible = showGrid;
-    }
     public void setWeekdayFilter(String weekday) {
         weekdayFilter = weekday;
     }
