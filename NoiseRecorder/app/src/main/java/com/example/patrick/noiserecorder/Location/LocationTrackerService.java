@@ -113,7 +113,7 @@ public class LocationTrackerService extends Service implements ServiceConnection
     @SuppressLint("MissingPermission")
     @Override
     public IBinder onBind(Intent intent) {
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
+        FusedLocationProviderClient fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
         fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
             @Override
             public void onSuccess(Location location) {
@@ -142,7 +142,8 @@ public class LocationTrackerService extends Service implements ServiceConnection
 
     @Override
     public void onBindingDied(ComponentName name) {
-            //TODO
+        //TODO
+
     }
 
     /**
@@ -160,8 +161,6 @@ public class LocationTrackerService extends Service implements ServiceConnection
     private static final long INTERVAL = 1000 * 5;
     private static final long FASTEST_INTERVAL = 1000 * 3;
     private LocationRequest locationRequest;
-
-    private FusedLocationProviderClient fusedLocationProviderClient;
 
     protected void createLocationRequest() {
         locationRequest = new LocationRequest();

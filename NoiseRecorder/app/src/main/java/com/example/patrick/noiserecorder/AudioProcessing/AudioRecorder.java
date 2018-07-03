@@ -26,46 +26,49 @@ public class AudioRecorder {
 
     AudioRecord audioRecorder;
     private String timestampOfLastAverageDbA = "";
-
+    private MainActivity caller;
+    Intent locationIntent;
     public AudioRecorder(MainActivity caller) {
         this.callingActivity = caller;
         // Bind to LocalService
-        Intent locationIntent = new Intent(caller, LocationTrackerService.class);
-        caller.bindService(locationIntent, this.serviceConnection, Context.BIND_AUTO_CREATE);
-
+        this.caller = caller;
+        locationIntent = new Intent(caller, LocationTrackerService.class);
     }
+
+    private final Handler recordingHandler = new Handler();
+    private Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            if(isRecording) {
+                if(startNewRecording) {
+                    Calendar calendar = Calendar.getInstance();
+                    timeStartedRecordingInMs = calendar.getTimeInMillis();
+                    audioRecorder = new AudioRecord(
+                            RecordingConfig.AUDIO_SOURCE,
+                            RecordingConfig.SAMPLE_RATE_IN_HZ,
+                            RecordingConfig.CHANNEL_CONFIG,
+                            RecordingConfig.AUDIO_FORMAT,
+                            RecordingConfig.BUFFER_SIZE_IN_BYTES);
+                    audioRecorder.startRecording();
+                    startNewRecording = false;
+                }
+
+                // Recursive call
+                final int delayTimeToNextCall = processAudioData();
+                recordingHandler.postDelayed(this, delayTimeToNextCall);
+            }
+        }
+    };
     /**
      * Starts the audio recorder and sets the record starting time.
      */
     public void startRecording() {
         if(!isRecording) {
             isRecording = true;
-            final Handler recordingHandler = new Handler();
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-                    if(isRecording) {
-                        if(startNewRecording) {
-                            Calendar calendar = Calendar.getInstance();
-                            timeStartedRecordingInMs = calendar.getTimeInMillis();
-                            audioRecorder = new AudioRecord(
-                                    RecordingConfig.AUDIO_SOURCE,
-                                    RecordingConfig.SAMPLE_RATE_IN_HZ,
-                                    RecordingConfig.CHANNEL_CONFIG,
-                                    RecordingConfig.AUDIO_FORMAT,
-                                    RecordingConfig.BUFFER_SIZE_IN_BYTES);
-                            audioRecorder.startRecording();
-                            startNewRecording = false;
-                        }
-
-                        // Recursive call
-                        final int delayTimeToNextCall = processAudioData();
-                        recordingHandler.postDelayed(this, delayTimeToNextCall);
-                    }
-                }
-            };
-
             // Start
+            Context c = caller.getApplicationContext();
+            c.bindService(locationIntent, this.serviceConnection, Context.BIND_AUTO_CREATE);
+            recordingHandler.removeCallbacks(runnable);
             recordingHandler.post(runnable);
         }
     }
@@ -77,7 +80,9 @@ public class AudioRecorder {
      * @returns the number of milliseconds until the next recording should occur.
      */
     private int processAudioData() {
-
+        if(audioRecorder == null) {
+            return 1;
+        }
         // retrieve values from the audio buffer
         short[] valueBuffer = new short[RecordingConfig.BLOCK_SIZE_FFT];
         int elementsRead = audioRecorder.read(valueBuffer, 0, RecordingConfig.BLOCK_SIZE_FFT);
@@ -107,6 +112,10 @@ public class AudioRecorder {
             if(audioRecorder != null) {
                 audioRecorder.stop();
                 audioRecorder.release();
+                audioRecorder = null;
+                Context c = caller.getApplicationContext();
+                c.stopService(locationIntent);
+                c.unbindService(this.serviceConnection);
             }
             isRecording = false;
         }
