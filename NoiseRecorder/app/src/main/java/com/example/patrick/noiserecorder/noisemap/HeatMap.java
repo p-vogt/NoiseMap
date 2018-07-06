@@ -128,7 +128,7 @@ public class HeatMap implements OnRequestResponseCallback {
     private void calculateBlur(GoogleMap map) {
         if(provider != null) {
             double curZoom = map.getCameraPosition().zoom;
-            int blurRadius = (int) (curZoom*5); // TODO
+            int blurRadius = (int) (curZoom*3); // TODO
             if(blurRadius > 50) blurRadius = 50;
             else if(blurRadius < 10) blurRadius = 10;
             provider.setRadius(blurRadius);
