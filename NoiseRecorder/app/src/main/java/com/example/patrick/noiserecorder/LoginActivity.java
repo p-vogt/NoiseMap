@@ -18,6 +18,7 @@ import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -37,6 +38,15 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.patrick.noiserecorder.network.RestCallFactory;
 
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -58,9 +68,72 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private EditText confirmPasswordView;
     private View progressView;
     private View loginFormView;
-    private String accessToken;
 
     private RequestQueue requestQueue;
+
+    private void mqttTest() {
+        final String clientId = "ExampleAndroidClient" + System.currentTimeMillis();
+
+        final MqttAndroidClient mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), "tcp://192.168.0.16:1884", clientId);
+        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
+            @Override
+            public void connectComplete(boolean reconnect, String serverURI) {
+                MqttMessage msg = new MqttMessage();
+                msg.setPayload("abc".getBytes());
+                try {
+                    mqttAndroidClient.publish("clients/" + clientId + "/request", msg);
+                    mqttAndroidClient.subscribe("clients/" + clientId + "/response",1);
+                } catch (MqttException e) {
+                    e.printStackTrace(); // TODO
+                }
+            }
+
+            @Override
+            public void connectionLost(Throwable cause) {
+                Log.d("MQTT", "connectionLost");
+            }
+
+            @Override
+            public void messageArrived(String topic, MqttMessage message) throws Exception {
+                Log.d("MQTT", "messageArrived");
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken token) {
+                Log.d("MQTT", "deliveryComplete");
+            }
+        });
+
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setCleanSession(false);
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setUserName("shatest@test.com");
+        mqttConnectOptions.setPassword("aA123456!!".toCharArray());
+        try {
+            //addToHistory("Connecting to " + serverUri);
+            mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
+                    disconnectedBufferOptions.setBufferEnabled(true);
+                    disconnectedBufferOptions.setBufferSize(100);
+                    disconnectedBufferOptions.setPersistBuffer(false);
+                    disconnectedBufferOptions.setDeleteOldestMessages(false);
+                    mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
+
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    Log.d("MQTT", "onFailure");
+                }
+            });
+
+
+        } catch (MqttException ex){
+            ex.printStackTrace();
+        }
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -86,7 +159,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 return false;
             }
         });
-
+        mqttTest();
         // load user data
         loadUserData();
 
