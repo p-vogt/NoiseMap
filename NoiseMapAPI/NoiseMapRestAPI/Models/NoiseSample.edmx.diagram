@@ -6,6 +6,7 @@
     <edmx:Diagrams>
       <Diagram DiagramId="826f8521560742019cb61bf32d4ec929" Name="Diagram1">
         <EntityTypeShape EntityType="NoiseMapModel.NOISE_SAMPLE" Width="1.5" PointX="0.75" PointY="0.75" IsExpanded="true" />
+        <EntityTypeShape EntityType="NoiseMapModel.AspNetUsers" Width="1.5" PointX="3" PointY="0.625" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

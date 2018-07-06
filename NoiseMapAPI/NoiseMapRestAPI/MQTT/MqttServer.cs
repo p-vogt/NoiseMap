@@ -1,8 +1,8 @@
 ﻿using MQTTnet;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
+using NoiseMapRestAPI.Models;
 using System;
-using System.Configuration;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Security.Cryptography;
@@ -12,22 +12,12 @@ namespace NoiseMapRestAPI
 {
     public class MqttServer
     {
-        public string GetConnectionString(string str)
-        {
-            var conn = ConfigurationManager.ConnectionStrings[str].ConnectionString;
-            var efBuilder = new System.Data.Entity.Core.EntityClient.EntityConnectionStringBuilder(conn);
-            conn = efBuilder.ProviderConnectionString;
-            return conn;
-        }
+        private readonly NoiseMapEntities db = new NoiseMapEntities();
 
         private IMqttServer server;
         private IMqttServerOptions options;
         public MqttServer()
         {
-            string test = GetConnectionString("NoiseMapSample");
-            myConnection = new SqlConnection(test);
-            myConnection.Open();
-
             // Configure MQTT server.
             options = new MqttServerOptionsBuilder()
                 .WithConnectionBacklog(100)
@@ -55,22 +45,17 @@ namespace NoiseMapRestAPI
                 context.ReturnCode = MqttConnectReturnCode.ConnectionRefusedIdentifierRejected;
                 return;
             }
-            using (var sqlCmd = new SqlCommand($"SELECT * FROM AspNetUsers WHERE Email = '{context.Username}';", myConnection))
+            var user = db.AspNetUsers.Where((u) => u.Email == context.Username).ToList();
+            if (user.Count > 0)
             {
-                var sqlCmdReader = sqlCmd.ExecuteReader();
-
-                while (sqlCmdReader.Read())
+                if (VerifyHashedPassword(user[0].PasswordHash, context.Password))
                 {
-                    var pwHash = sqlCmdReader["PasswordHash"].ToString();
-                    if (VerifyHashedPassword(pwHash, context.Password))
-                    {
-                        context.ReturnCode = MqttConnectReturnCode.ConnectionAccepted;
-                        return;
-                    }
+                    context.ReturnCode = MqttConnectReturnCode.ConnectionAccepted;
+                    return;
                 }
-
-                context.ReturnCode = MqttConnectReturnCode.ConnectionRefusedBadUsernameOrPassword;
             }
+
+            context.ReturnCode = MqttConnectReturnCode.ConnectionRefusedBadUsernameOrPassword;
 
         }
         private static string HashPassword(string password)

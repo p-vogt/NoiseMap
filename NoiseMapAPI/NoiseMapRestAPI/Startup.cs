@@ -14,12 +14,13 @@ namespace NoiseMapRestAPI
             ConfigureAuth(app);
             var server = new MqttServer();
             var client = new MqttClient();
-            new Thread(async () => 
-                await server.Start()
+            new Thread(async () =>
+            {
+                await server.Start();
+                await client.Connect();
+            }
+
             ).Start();
-            /*new Thread(async () => 
-                await client.Connect()
-            ).Start();*/
         }
     }
 }

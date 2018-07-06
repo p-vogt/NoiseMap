@@ -22,7 +22,7 @@ namespace NoiseMapRestAPI.MQTT
                 .WithClientId("Client1")
                 .WithTcpServer("127.0.0.1", 1884)
                 .WithClientId("abc123123123123123123")
-                .WithCredentials("mySecretUser", "mySecretPassword")
+                .WithCredentials("emulator@test.com", "aA123456!!")
                 // .WithTls()
                 // .WithCleanSession()
                 .Build();
@@ -33,6 +33,7 @@ namespace NoiseMapRestAPI.MQTT
 
                 // Subscribe to a topic
                 await client.SubscribeAsync(new TopicFilterBuilder().WithTopic(NEW_MEASUREMENT_TOPIC_NAME).Build());
+                await client.SubscribeAsync(new TopicFilterBuilder().WithTopic("clients/+/request").Build());
                 Console.WriteLine("### SUBSCRIBED ###");
 
                 client.ApplicationMessageReceived += Client_ApplicationMessageReceived;
@@ -40,9 +41,10 @@ namespace NoiseMapRestAPI.MQTT
 
         }
         private readonly NoiseMapEntities db = new NoiseMapEntities();
-        private void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+        private async void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
-            if(e.ApplicationMessage.Topic.Equals(NEW_MEASUREMENT_TOPIC_NAME))
+            string topic = e.ApplicationMessage.Topic;
+            if (topic.Equals(NEW_MEASUREMENT_TOPIC_NAME))
             {
 
                 var payload = e.ApplicationMessage.Payload;
@@ -52,6 +54,12 @@ namespace NoiseMapRestAPI.MQTT
                 sample.Id = db.NOISE_SAMPLE.Count() == 0 ? 0 : (db.NOISE_SAMPLE.Max(x => x.Id) + 1);
                 db.NOISE_SAMPLE.Add(sample);
                 db.SaveChanges();
+            }
+            else if (topic.StartsWith("clients/", StringComparison.CurrentCulture) && topic.EndsWith("/request", StringComparison.CurrentCulture))
+            {
+
+                var startOfTopic = topic.Substring(0, topic.Length - "/request".Length);
+                await client.PublishAsync(startOfTopic + "/response", "moinsen");
             }
         }
         public async Task Connect()

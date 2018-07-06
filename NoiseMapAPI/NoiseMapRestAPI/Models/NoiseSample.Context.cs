@@ -26,5 +26,6 @@ namespace NoiseMapRestAPI.Models
         }
     
         public virtual DbSet<NOISE_SAMPLE> NOISE_SAMPLE { get; set; }
+        public virtual DbSet<AspNetUsers> AspNetUsers { get; set; }
     }
 }
