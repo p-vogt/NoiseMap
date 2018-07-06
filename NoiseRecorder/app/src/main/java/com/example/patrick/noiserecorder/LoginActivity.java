@@ -33,7 +33,6 @@ import android.widget.Toast;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.patrick.noiserecorder.network.RestCallFactory;
@@ -71,6 +70,26 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
     private RequestQueue requestQueue;
 
+    public class RequestSamplesOptions {
+        RequestSamplesOptions(double longitudeStart, double longitudeEnd, double latitudeStart, double latitudeEnd)
+        {
+            LongitudeStart = longitudeStart;
+            LongitudeEnd = longitudeEnd;
+            LatitudeStart = latitudeStart;
+            LatitudeEnd = latitudeEnd;
+        }
+        public double LongitudeStart;
+        public double LongitudeEnd;
+        public double LatitudeStart;
+        public double LatitudeEnd;
+
+        public String toJSONString() {
+            return "{\"longitudeStart\": " + LongitudeStart + ","
+                    + "\"longitudeEnd\": " + LongitudeEnd + ","
+                    + "\"latitudeStart\": " + LatitudeStart + ","
+                    + "\"latitudeEnd\": " + LatitudeEnd + "}";
+        }
+    }
     private void mqttTest() {
         final String clientId = "ExampleAndroidClient" + System.currentTimeMillis();
 
@@ -79,10 +98,11 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             @Override
             public void connectComplete(boolean reconnect, String serverURI) {
                 MqttMessage msg = new MqttMessage();
-                msg.setPayload("abc".getBytes());
+                RequestSamplesOptions options = new RequestSamplesOptions(0,200.0,0.0,400.0);
+                msg.setPayload(options.toJSONString().getBytes());
                 try {
-                    mqttAndroidClient.publish("clients/" + clientId + "/request", msg);
                     mqttAndroidClient.subscribe("clients/" + clientId + "/response",1);
+                    mqttAndroidClient.publish("clients/" + clientId + "/request", msg);
                 } catch (MqttException e) {
                     e.printStackTrace(); // TODO
                 }
@@ -95,6 +115,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
             @Override
             public void messageArrived(String topic, MqttMessage message) throws Exception {
+
                 Log.d("MQTT", "messageArrived");
             }
 

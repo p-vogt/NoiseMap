@@ -40,7 +40,11 @@ namespace NoiseMapRestAPI.API
     }
     public class RequestSamplesOptions
     {
-        RequestSamplesOptions(double longitudeStart, double longitudeEnd, double latitudeStart, double latitudeEnd)
+        public RequestSamplesOptions()
+        {
+
+        }
+        public RequestSamplesOptions(double longitudeStart, double longitudeEnd, double latitudeStart, double latitudeEnd)
         {
             LongitudeStart = longitudeStart;
             LongitudeEnd = longitudeEnd;

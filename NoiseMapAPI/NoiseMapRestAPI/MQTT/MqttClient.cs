@@ -1,6 +1,7 @@
 ﻿using MQTTnet;
 using MQTTnet.Client;
 using Newtonsoft.Json;
+using NoiseMapRestAPI.API;
 using NoiseMapRestAPI.Models;
 using System;
 using System.Linq;
@@ -43,12 +44,12 @@ namespace NoiseMapRestAPI.MQTT
         private readonly NoiseMapEntities db = new NoiseMapEntities();
         private async void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
-            string topic = e.ApplicationMessage.Topic;
-            if (topic.Equals(NEW_MEASUREMENT_TOPIC_NAME))
-            {
+            var topic = e.ApplicationMessage.Topic;
+            var payload = e.ApplicationMessage.Payload;
+            var result = System.Text.Encoding.UTF8.GetString(payload);
 
-                var payload = e.ApplicationMessage.Payload;
-                var result = System.Text.Encoding.UTF8.GetString(payload);
+            if (topic.Equals(NEW_MEASUREMENT_TOPIC_NAME))
+            {              
                 var sample = JsonConvert.DeserializeObject<NOISE_SAMPLE>(result);
                 sample.userName = "MQTT_TEST";
                 sample.Id = db.NOISE_SAMPLE.Count() == 0 ? 0 : (db.NOISE_SAMPLE.Max(x => x.Id) + 1);
@@ -57,9 +58,11 @@ namespace NoiseMapRestAPI.MQTT
             }
             else if (topic.StartsWith("clients/", StringComparison.CurrentCulture) && topic.EndsWith("/request", StringComparison.CurrentCulture))
             {
-
+                var requestOptions = JsonConvert.DeserializeObject<RequestSamplesOptions>(result);
+                var samples = SamplesAPI.getSamples(db, requestOptions);
                 var startOfTopic = topic.Substring(0, topic.Length - "/request".Length);
-                await client.PublishAsync(startOfTopic + "/response", "moinsen");
+                var jsonMsg = JsonConvert.SerializeObject(samples);
+                await client.PublishAsync(startOfTopic + "/response", jsonMsg);
             }
         }
         public async Task Connect()
