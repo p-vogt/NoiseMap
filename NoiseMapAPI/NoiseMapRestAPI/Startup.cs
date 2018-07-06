@@ -17,9 +17,9 @@ namespace NoiseMapRestAPI
             new Thread(async () => 
                 await server.Start()
             ).Start();
-            new Thread(async () => 
+            /*new Thread(async () => 
                 await client.Connect()
-            ).Start();
+            ).Start();*/
         }
     }
 }

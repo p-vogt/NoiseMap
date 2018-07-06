@@ -21,7 +21,8 @@ namespace NoiseMapRestAPI.MQTT
             options = new MqttClientOptionsBuilder()
                 .WithClientId("Client1")
                 .WithTcpServer("127.0.0.1", 1884)
-                .WithCredentials("bud", "%spencer%")
+                .WithClientId("abc123123123123123123")
+                .WithCredentials("mySecretUser", "mySecretPassword")
                 // .WithTls()
                 // .WithCleanSession()
                 .Build();
