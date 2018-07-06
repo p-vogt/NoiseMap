@@ -8,7 +8,7 @@ public final class RecordingConfig {
     public static final int SAMPLE_RATE_IN_HZ = 44100;
     public static final int FFTS_PER_SECOND = 20;
 
-    public static final int TIME_BETWEEN_MEASUREMENTS_IN_MS = 7500;
+    public static final int TIME_BETWEEN_MEASUREMENTS_IN_MS = 5000;
     public static final int RECORDING_DURATION_IN_MS = 1000;
 
     public static final int DELAY_BETWEEN_MEASUREMENTS_IN_MS = TIME_BETWEEN_MEASUREMENTS_IN_MS - RECORDING_DURATION_IN_MS;
