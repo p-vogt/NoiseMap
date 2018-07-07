@@ -100,7 +100,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         filterList.add("Wed");
         filterList.add("Thu");
         filterList.add("Fri");
-        filterList.add("Sa");
+        filterList.add("Sat");
         filterList.add("Sun");
 
         ArrayAdapter<String> filterDataAdapter = new ArrayAdapter<>(this,
