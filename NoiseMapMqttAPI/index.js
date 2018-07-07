@@ -8,7 +8,7 @@ async function getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, la
   await db.connect(DB_PW);
   const result = await db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
   db.disconnect();
-  mqttClient.publish(topic, JSON.stringify(result));
+  mqttClient.publish(topic, JSON.stringify({samples: result}));
 }
 
 const settings = {
