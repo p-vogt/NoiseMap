@@ -208,7 +208,7 @@ public class HeatMap implements OnRequestResponseCallback {
     private void mqttTest() {
         final String clientId = "ExampleAndroidClient" + System.currentTimeMillis();
 
-        final MqttAndroidClient mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://104.45.16.18:1884", clientId);
+        final MqttAndroidClient mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://127.0.0.1:1883", clientId);
         mqttAndroidClient.setCallback(new MqttCallbackExtended() {
             @Override
             public void connectComplete(boolean reconnect, String serverURI) {
@@ -358,6 +358,11 @@ public class HeatMap implements OnRequestResponseCallback {
     static int refreshCounter = 0;
     //TODO refactor
     public void refresh(boolean fullRefresh) {
+        mqttTest();
+        // TODO
+
+
+
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isGridVisible = sharedPref.getBoolean("noisemap_tiles_show_grid", false);
 
