@@ -95,7 +95,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         spinnerWeekdayFilter.setBackgroundResource(android.R.drawable.btn_dropdown);
         final List<String> filterList = new ArrayList<>();
         filterList.add("No Filter");
-        filterList.add("Mo");
+        filterList.add("Mon");
         filterList.add("Tue");
         filterList.add("Wed");
         filterList.add("Thu");
