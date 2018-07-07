@@ -70,6 +70,17 @@ public class HeatMap implements OnRequestResponseCallback {
 
         double longitudeStart = southWestVisible.longitude;
         double longitudeEnd = northEastVisible.longitude;
+        //TODO config
+        boolean useHttp = false;
+        if(useHttp) {
+            requestSamplesViaHttp(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd);
+        } else {
+            requestSamplesViaMqtt(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd);
+        }
+
+    }
+
+    private void requestSamplesViaHttp(double latitudeStart, double latitudeEnd, double longitudeStart, double longitudeEnd) {
         String apiUrl = Config.API_BASE_URL + "Sample";
         apiUrl += "?latitudeStart=" + latitudeStart;
         apiUrl += "&latitudeEnd=" + latitudeEnd;
@@ -205,15 +216,15 @@ public class HeatMap implements OnRequestResponseCallback {
         }
     }
 
-    private void mqttTest() {
+    private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd) {
         final String clientId = "ExampleAndroidClient" + System.currentTimeMillis();
 
-        final MqttAndroidClient mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://127.0.0.1:1883", clientId);
+        final MqttAndroidClient mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://noisemap.westeurope.cloudapp.azure.com:1883", clientId);
         mqttAndroidClient.setCallback(new MqttCallbackExtended() {
             @Override
             public void connectComplete(boolean reconnect, String serverURI) {
                 MqttMessage msg = new MqttMessage();
-                RequestSamplesOptions options = new RequestSamplesOptions(0,200.0,0.0,400.0);
+                RequestSamplesOptions options = new RequestSamplesOptions(longitudeStart,longitudeEnd,latitudeStart,latitudeEnd);
                 msg.setPayload(options.toJSONString().getBytes());
                 try {
                     mqttAndroidClient.subscribe("clients/" + clientId + "/response",1);
@@ -358,11 +369,6 @@ public class HeatMap implements OnRequestResponseCallback {
     static int refreshCounter = 0;
     //TODO refactor
     public void refresh(boolean fullRefresh) {
-        mqttTest();
-        // TODO
-
-
-
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isGridVisible = sharedPref.getBoolean("noisemap_tiles_show_grid", false);
 
