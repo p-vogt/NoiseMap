@@ -21,8 +21,9 @@ namespace NoiseMapRestAPI.MQTT
             // Create TCP based options using the builder.
             options = new MqttClientOptionsBuilder()
                 .WithClientId("Client1")
-                .WithTcpServer("127.0.0.1", 1884)
+                .WithTcpServer("noisemap.westeurope.cloudapp.azure.com", 1884)
                 .WithClientId("abc123123123123123123")
+                //.WithWebSocketServer("127.0.0.1")
                 .WithCredentials("emulator@test.com", "aA123456!!")
                 // .WithTls()
                 // .WithCleanSession()
@@ -49,7 +50,7 @@ namespace NoiseMapRestAPI.MQTT
             var result = System.Text.Encoding.UTF8.GetString(payload);
 
             if (topic.Equals(NEW_MEASUREMENT_TOPIC_NAME))
-            {              
+            {
                 var sample = JsonConvert.DeserializeObject<NOISE_SAMPLE>(result);
                 sample.userName = "MQTT_TEST";
                 sample.Id = db.NOISE_SAMPLE.Count() == 0 ? 0 : (db.NOISE_SAMPLE.Max(x => x.Id) + 1);

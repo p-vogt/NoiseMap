@@ -2,22 +2,30 @@
 using MQTTnet.Protocol;
 using MQTTnet.Server;
 using NoiseMapRestAPI.Models;
+using NoiseMapRestAPI.MQTT;
 using System;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace NoiseMapRestAPI
 {
+
     public class MqttServer
     {
         private readonly NoiseMapEntities db = new NoiseMapEntities();
 
         private IMqttServer server;
         private IMqttServerOptions options;
+
         public MqttServer()
         {
+
+
             // Configure MQTT server.
             options = new MqttServerOptionsBuilder()
                 .WithConnectionBacklog(100)
@@ -27,10 +35,10 @@ namespace NoiseMapRestAPI
 
             server = new MqttFactory().CreateMqttServer();
         }
+
         private SqlConnection myConnection;
         public async Task Start()
         {
-
             await server.StartAsync(options);
 
         }
