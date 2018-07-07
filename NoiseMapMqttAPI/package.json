@@ -1,0 +1,14 @@
+{
+  "name": "noisemapmqttapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Patrick Vogt",
+  "license": "MIT",
+  "dependencies": {
+    "mosca": "^2.8.2"
+  }
+}
