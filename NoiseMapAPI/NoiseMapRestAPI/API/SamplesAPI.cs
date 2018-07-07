@@ -1,5 +1,6 @@
 ﻿using NoiseMapRestAPI.Models;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace NoiseMapRestAPI.API
@@ -24,7 +25,7 @@ namespace NoiseMapRestAPI.API
                 options.LatitudeEnd = tmp;
             }
 
-            var filteredData = db.NOISE_SAMPLE.Where(x => x.longitude >= options.LatitudeStart && x.longitude <= options.LatitudeEnd
+            var filteredData = db.NOISE_SAMPLE.Where(x => x.longitude >= options.LongitudeStart && x.longitude <= options.LongitudeEnd
                                     && x.latitude >= options.LatitudeStart && x.latitude <= options.LatitudeEnd);
 
             return new FilteredSamples(filteredData);
@@ -58,7 +59,7 @@ namespace NoiseMapRestAPI.API
 
         public static RequestSamplesOptions FromQuery(IEnumerable<KeyValuePair<string, string>> queryNameValuePairs)
         {
-            var query = queryNameValuePairs.ToDictionary(x => x.Key, x => x.Value);
+            var query = queryNameValuePairs.ToDictionary(x => x.Key, x => x.Value.Replace(",","."));
             // filter the region 
             var longitudeStart = 0.0d;
             var longitudeEnd = 0.0d;
@@ -68,18 +69,18 @@ namespace NoiseMapRestAPI.API
             if (query.Keys.Contains(nameof(longitudeStart)) && query.Keys.Contains(nameof(longitudeEnd))
                 && query.Keys.Contains(nameof(latitudeStart)) && query.Keys.Contains(nameof(latitudeEnd)))
             {
-                isValid = double.TryParse(query[nameof(longitudeStart)], out longitudeStart);
+                isValid = double.TryParse(query[nameof(longitudeStart)], NumberStyles.Any, CultureInfo.InvariantCulture, out longitudeStart);
                 if (isValid)
                 {
-                    isValid = double.TryParse(query[nameof(longitudeEnd)], out longitudeEnd);
+                    isValid = double.TryParse(query[nameof(longitudeEnd)], NumberStyles.Any, CultureInfo.InvariantCulture, out longitudeEnd);
                 }
                 if (isValid)
                 {
-                    isValid = double.TryParse(query[nameof(latitudeStart)], out latitudeStart);
+                    isValid = double.TryParse(query[nameof(latitudeStart)], NumberStyles.Any, CultureInfo.InvariantCulture, out latitudeStart);
                 }
                 if (isValid)
                 {
-                    isValid = double.TryParse(query[nameof(latitudeEnd)], out latitudeEnd);
+                    isValid = double.TryParse(query[nameof(latitudeEnd)], NumberStyles.Any, CultureInfo.InvariantCulture, out latitudeEnd);
                 }
             }
 
