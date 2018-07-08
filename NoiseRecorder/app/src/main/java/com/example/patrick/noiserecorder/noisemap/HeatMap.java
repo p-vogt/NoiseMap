@@ -139,7 +139,7 @@ public class HeatMap implements OnRequestResponseCallback {
         this.password = password;
         this.activity = activity;
         this.clientId = "ExampleAndroidClient" + System.currentTimeMillis();
-        this.mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://192.168.0.16:1883", clientId);
+        this.mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://noisemap.westeurope.cloudapp.azure.com:1883", clientId);
         initMqtt();
         requestQueue = Volley.newRequestQueue(activity);
 
