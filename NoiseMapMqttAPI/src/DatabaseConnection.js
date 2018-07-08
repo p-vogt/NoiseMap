@@ -73,6 +73,7 @@ module.exports = class DatabaseConnection {
         return new Promise((resolve) => {
             let passwordhash = [];
             let query = `SELECT passwordhash FROM AspNetUsers WHERE email LIKE '${username}';`;
+            console.log(query);
             // Read all rows from table
             const request = new Request(
                 query,
