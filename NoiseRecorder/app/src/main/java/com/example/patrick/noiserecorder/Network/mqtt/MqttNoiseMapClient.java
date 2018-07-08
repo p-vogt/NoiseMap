@@ -1,8 +1,7 @@
-package com.example.patrick.noiserecorder.network;
+package com.example.patrick.noiserecorder.network.mqtt;
 
 import android.content.Context;
 import android.util.Log;
-
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;

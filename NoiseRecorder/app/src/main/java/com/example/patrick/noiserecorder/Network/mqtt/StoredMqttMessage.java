@@ -1,8 +1,8 @@
-package com.example.patrick.noiserecorder.network;
+package com.example.patrick.noiserecorder.network.mqtt;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-class StoredMqttMessage {
+public class StoredMqttMessage {
 
     public StoredMqttMessage(String topic, MqttMessage message) {
         this.topic = topic;

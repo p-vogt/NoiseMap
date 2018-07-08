@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder.network;
+package com.example.patrick.noiserecorder.network.rest;
 
 import org.json.JSONObject;
 

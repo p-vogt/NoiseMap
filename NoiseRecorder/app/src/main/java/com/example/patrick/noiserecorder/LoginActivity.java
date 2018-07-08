@@ -34,11 +34,10 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.example.patrick.noiserecorder.network.RestCallFactory;
+import com.example.patrick.noiserecorder.network.rest.RestCallFactory;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**

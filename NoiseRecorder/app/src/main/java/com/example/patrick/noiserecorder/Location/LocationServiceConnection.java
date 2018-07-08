@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.util.Log;
 
 public class LocationServiceConnection implements ServiceConnection {
     private boolean isBound = false;
@@ -35,7 +36,7 @@ public class LocationServiceConnection implements ServiceConnection {
         try {
             service.send(msg);
         } catch (RemoteException e) {
-            e.printStackTrace(); // TODO
+            Log.e("LocationServiceConnection", "" + e.getStackTrace());
         }
     }
 };

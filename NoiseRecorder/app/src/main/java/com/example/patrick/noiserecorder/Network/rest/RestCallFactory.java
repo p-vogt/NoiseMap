@@ -1,4 +1,4 @@
-package com.example.patrick.noiserecorder.network;
+package com.example.patrick.noiserecorder.network.rest;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -19,9 +19,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.example.patrick.noiserecorder.LoginActivity;
 import com.example.patrick.noiserecorder.MainActivity;
-import com.example.patrick.noiserecorder.MapsActivity;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -46,8 +44,7 @@ public final class RestCallFactory {
                             }
 
                         } catch (JSONException e) {
-                            e.printStackTrace();
-                            // TODO invalid response
+                            Log.e("createGetRequest", "" + e.getStackTrace());
                         }
                     }
                 }, new Response.ErrorListener() {
@@ -65,7 +62,7 @@ public final class RestCallFactory {
                     }
                     // TODO
                 } catch (UnsupportedEncodingException | JSONException e) {
-                    e.printStackTrace(); //TODO
+                    Log.e("createGetRequest", "" + e.getStackTrace());
                     return;
 
                 }
@@ -86,11 +83,7 @@ public final class RestCallFactory {
         return new JsonObjectRequest(url, jsonBody,
                 new Response.Listener<JSONObject>() {
                     @Override
-                    public void onResponse(JSONObject response) {
-                        // TODO
-                        int i = 0;
-                    }
-
+                    public void onResponse(JSONObject response) {}
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
@@ -101,7 +94,7 @@ public final class RestCallFactory {
                         msg = new String(error.networkResponse.data, "UTF-8");
                     }
                 } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace(); //TODO
+                    Log.e("createPostSampleRequest", "onErrorResponse" + e.getStackTrace());
                     return;
                 }
             }
@@ -221,7 +214,10 @@ public final class RestCallFactory {
         };
     }
 
-    public static JsonObjectRequest createRegisterUserRequest(final String username, final String password, final String confirmPassword,final String url, final LoginActivity activity) throws IllegalAccessException {
+    public static JsonObjectRequest createRegisterUserRequest(final String username, final String password,
+                                                              final String confirmPassword,final String url,
+                                                              final LoginActivity activity)
+                                                        throws IllegalAccessException {
 
         if(username == null) throw new IllegalAccessException("username");
         if(password == null) throw new IllegalAccessException("password");

@@ -1,4 +1,4 @@
- package com.example.patrick.noiserecorder.network;
+ package com.example.patrick.noiserecorder.network.rest;
 
  public class RequestSamplesOptions {
      public RequestSamplesOptions(double longitudeStart, double longitudeEnd, double latitudeStart, double latitudeEnd)

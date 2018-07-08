@@ -87,7 +87,7 @@ public class AudioRecorder {
         short[] valueBuffer = new short[RecordingConfig.BLOCK_SIZE_FFT];
         int elementsRead = audioRecorder.read(valueBuffer, 0, RecordingConfig.BLOCK_SIZE_FFT);
         if(elementsRead < 0) {
-            return 1; // TODO
+            return 1;
         }
         // process the data
         fft.process(valueBuffer);
@@ -99,7 +99,6 @@ public class AudioRecorder {
             finishMeasurement();
             return RecordingConfig.DELAY_BETWEEN_MEASUREMENTS_IN_MS;
         }
-        // TODO
         return 1;
     }
 

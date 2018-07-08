@@ -28,9 +28,9 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.patrick.noiserecorder.audioprocessing.AudioRecorder;
 import com.example.patrick.noiserecorder.location.LocationTrackerBroadcastReceiver;
-import com.example.patrick.noiserecorder.network.INoiseMapMqttConsumer;
-import com.example.patrick.noiserecorder.network.MqttNoiseMapClient;
-import com.example.patrick.noiserecorder.network.RestCallFactory;
+import com.example.patrick.noiserecorder.network.mqtt.INoiseMapMqttConsumer;
+import com.example.patrick.noiserecorder.network.mqtt.MqttNoiseMapClient;
+import com.example.patrick.noiserecorder.network.rest.RestCallFactory;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONException;
