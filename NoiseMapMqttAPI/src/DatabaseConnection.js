@@ -46,9 +46,7 @@ module.exports = class DatabaseConnection {
             // Read all rows from table
             const request = new Request(
                 query,
-                function (err, rowCount, rows) {
-                    console.log(rowCount + ' row(s) returned');
-                }
+                (err, rowCount, rows) => {}
             );
             request.on('error', (err) => {
                 console.err(err);
@@ -73,9 +71,7 @@ module.exports = class DatabaseConnection {
             // Read all rows from table
             const request = new Request(
                 query,
-                function (err, rowCount, rows) {
-                    console.log(rowCount + ' row(s) returned');
-                }
+                (err, rowCount, rows) => {}
             );
             request.on('error', (err) => {
                 console.err(err);
