@@ -17,7 +17,8 @@ async function getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, la
   await db.connect(secret.DB_PW);
   const result = await db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
   db.disconnect();
-  mqttClient.publish(topic, JSON.stringify({ samples: result }));
+  const msg = JSON.stringify({ samples: result});
+  mqttClient.publish(topic, msg, {qos: 1, retain: "true"});
 }
 
 const settings = {
@@ -26,7 +27,11 @@ const settings = {
 };
 
 const server = new mosca.Server(settings);
-const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: 'NoiseMapApiMqttClient', username: secret.CLIENT_USER, password: secret.CLIENT_PW });
+let milliTime = process.hrtime();
+milliTime = milliTime[0] * 1000 + milliTime[1];
+
+const mqttClientId = 'NoiseMapApiMqttClient' + milliTime;
+const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: mqttClientId, username: secret.CLIENT_USER, password: secret.CLIENT_PW });
 const db = new DatabaseConnection();
 
 mqttClient.on('message', (topic, message) => {
@@ -48,6 +53,7 @@ mqttClient.on('message', (topic, message) => {
   }
   else if (topic.match(reSamplesRequest)) {
     const { longitudeStart, longitudeEnd, latitudeStart, latitudeEnd } = json;
+    console.log("samples request:", json);
     getSamples(topic.replace("request", "response"), longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
   }
 })
@@ -61,8 +67,9 @@ var authenticate = async (client, username, password, callback) => {
 }
 
 var authorizePublish = (client, topic, payload, callback) => {
-  if (topic && topic.split('/') && topic.split('/').length > 1) {
-    callback(null, client.id == topic.split('/')[1]);
+  if (client.id === mqttClientId || 
+     (topic && topic.split('/') && topic.split('/').length > 1)) {
+    callback(null, client.id === mqttClientId || client.id == topic.split('/')[1]);
   }
 }
 
