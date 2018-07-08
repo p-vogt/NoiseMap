@@ -113,10 +113,15 @@ public class HeatMap implements OnRequestResponseCallback {
     }
 
     private String accessToken;
+    private String username;
+    private String password;
     private double alpha;
     private final GoogleMap map;
+    private final String clientId;
+    private final MqttAndroidClient mqttAndroidClient;
+    private boolean isMqttConnected = false;
     private double prevZoom = 0;
-    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, final MapsActivity activity) {
+    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final MapsActivity activity) {
         this.map = map;
         map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
             @Override
@@ -130,7 +135,12 @@ public class HeatMap implements OnRequestResponseCallback {
         });
         alpha = initAlpha;
         this.accessToken = accessToken;
+        this.username = username;
+        this.password = password;
         this.activity = activity;
+        this.clientId = "ExampleAndroidClient" + System.currentTimeMillis();
+        this.mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://192.168.0.16:1883", clientId);
+        initMqtt();
         requestQueue = Volley.newRequestQueue(activity);
 
         map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
@@ -216,26 +226,21 @@ public class HeatMap implements OnRequestResponseCallback {
         }
     }
 
-    private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd) {
-        final String clientId = "ExampleAndroidClient" + System.currentTimeMillis();
-
-        final MqttAndroidClient mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://noisemap.westeurope.cloudapp.azure.com:1883", clientId);
+    private void initMqtt() {
         mqttAndroidClient.setCallback(new MqttCallbackExtended() {
             @Override
             public void connectComplete(boolean reconnect, String serverURI) {
-                MqttMessage msg = new MqttMessage();
-                RequestSamplesOptions options = new RequestSamplesOptions(longitudeStart,longitudeEnd,latitudeStart,latitudeEnd);
-                msg.setPayload(options.toJSONString().getBytes());
+                isMqttConnected = true;
                 try {
                     mqttAndroidClient.subscribe("clients/" + clientId + "/response",1);
-                    mqttAndroidClient.publish("clients/" + clientId + "/request", msg);
                 } catch (MqttException e) {
-                    e.printStackTrace(); // TODO
+                    Log.d("MQTT: could not sub", e.getMessage());
                 }
             }
 
             @Override
             public void connectionLost(Throwable cause) {
+                isMqttConnected = false;
                 Log.d("MQTT", "connectionLost");
             }
 
@@ -258,16 +263,15 @@ public class HeatMap implements OnRequestResponseCallback {
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(false);
         mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setUserName("shatest@test.com");
-        mqttConnectOptions.setPassword("aA123456!!".toCharArray());
+        mqttConnectOptions.setUserName(username);
+        mqttConnectOptions.setPassword(password.toCharArray());
         try {
-            //addToHistory("Connecting to " + serverUri);
             mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
                     DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
                     disconnectedBufferOptions.setBufferEnabled(true);
-                    disconnectedBufferOptions.setBufferSize(100);
+                    disconnectedBufferOptions.setBufferSize(1000);
                     disconnectedBufferOptions.setPersistBuffer(false);
                     disconnectedBufferOptions.setDeleteOldestMessages(false);
                     mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
@@ -282,8 +286,24 @@ public class HeatMap implements OnRequestResponseCallback {
 
 
         } catch (MqttException ex){
-            ex.printStackTrace();
+            Log.d("MQTT: could not connect:", ex.getMessage());
         }
+    }
+
+    private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd) {
+        MqttMessage msg = new MqttMessage();
+        RequestSamplesOptions options = new RequestSamplesOptions(longitudeStart,longitudeEnd,latitudeStart,latitudeEnd);
+        msg.setRetained(true);
+        msg.setQos(1);
+        msg.setPayload(options.toJSONString().getBytes());
+        try {
+            if(isMqttConnected) {
+                mqttAndroidClient.publish("clients/" + clientId + "/request", msg);
+            }
+        } catch (MqttException e) {
+            Log.d("MQTT: could not publish:", e.getMessage());
+        }
+
     }
     public boolean parseSamples(JSONObject json) {
         samples.clear();

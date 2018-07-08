@@ -129,7 +129,9 @@ public final class RestCallFactory {
                             JSONObject resp = new JSONObject(response);
                             final String accessToken = resp.getString("access_token"); //TODO delete private var?
                             Bundle b = new Bundle();
-                            b.putString("accessToken", accessToken); //Your id
+                            b.putString("accessToken", accessToken);
+                            b.putString("username", username);
+                            b.putString("password", password);
 
                             // save user data
                             SharedPreferences settings = activity.getSharedPreferences("UserData", 0);

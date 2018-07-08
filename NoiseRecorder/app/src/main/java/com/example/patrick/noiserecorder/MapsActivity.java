@@ -28,6 +28,9 @@ import java.util.List;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private String accessToken;
+    private String username;
+    private String password;
+
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -38,6 +41,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 case R.id.navigation_home:
                     Bundle b = new Bundle();
                     b.putString("accessToken", accessToken);
+                    b.putString("username", username);
+                    b.putString("password", password);
                     intent = new Intent(MapsActivity.this, MainActivity.class);
                     intent.putExtras(b);
                     startActivity(intent);
@@ -64,6 +69,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Bundle b = getIntent().getExtras();
         if (b != null) {
             accessToken = b.getString("accessToken");
+            username = b.getString("username");
+            password = b.getString("password");
         }
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setSelectedItemId(R.id.navigation_map);
@@ -199,7 +206,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setMapType();
         // TODO
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
-        heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, this);
+        heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, username, password, this);
         heatmap.setWeekdayFilter("No Filter");
         heatmap.requestSamplesForVisibleArea();
     }

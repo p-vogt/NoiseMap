@@ -43,6 +43,8 @@ public class MainActivity extends AppCompatActivity {
     ArrayAdapter<String> adapter;
     private AudioRecorder audioRecorder;
     private String accessToken;
+    private String username;
+    private String password;
     private RequestQueue requestQueue;
     private BroadcastReceiver messageReceiver;
     private Switch switchOfflineMode;
@@ -71,6 +73,8 @@ public class MainActivity extends AppCompatActivity {
                     // pass the accessToken to the new MapActivity
                     intent = new Intent(MainActivity.this, MapsActivity.class);
                     b.putString("accessToken", accessToken);
+                    b.putString("username", username);
+                    b.putString("password", password);
                     intent.putExtras(b);
 
                     startActivity(intent);
@@ -133,6 +137,8 @@ public class MainActivity extends AppCompatActivity {
         Bundle b = getIntent().getExtras();
         if (b != null) {
             accessToken = b.getString("accessToken");
+            username = b.getString("username");
+            password = b.getString("password");
         } else {
             //TODO
             return;
