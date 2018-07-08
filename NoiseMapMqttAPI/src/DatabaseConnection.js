@@ -117,7 +117,9 @@ module.exports = class DatabaseConnection {
             }
         }
 
-        if (storedSubKeyString === '') { return false }
+        if (storedSubKeyString === '') { 
+            return false 
+        }
 
         const nodeCrypto = crypto.pbkdf2Sync(password, new Buffer(saltString, 'hex'), 1000, 256, 'sha1');
 
@@ -126,6 +128,9 @@ module.exports = class DatabaseConnection {
         // The first 64 bytes of the derived key should
         // match the stored sub key
         const passwordsDoMatch = derivedKeyOctets.indexOf(storedSubKeyString) === 0;
+        if(!passwordsDoMatch) {
+            console.error("passwords do not match!");
+        }
         return passwordsDoMatch;
     }
 }

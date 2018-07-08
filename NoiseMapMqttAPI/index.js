@@ -26,7 +26,7 @@ const settings = {
 };
 
 const server = new mosca.Server(settings);
-const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: '0', username: secret.CLIENT_USER, password: secret.CLIENT_PW });
+const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: 'NoiseMapApiMqttClient', username: secret.CLIENT_USER, password: secret.CLIENT_PW });
 const db = new DatabaseConnection();
 
 mqttClient.on('message', (topic, message) => {
@@ -78,7 +78,9 @@ server.on('clientDisconnected', (client) => {
 })
 // fired when a message is received
 server.on('published', (packet, client) => {
-  console.log('Published', packet);
+  if (packet && packet.topic && packet.topic.length > 0 && packet.topic[0] !== '$') {
+    console.log('Published', packet);
+  }
 });
 
 server.on('ready', setup);
