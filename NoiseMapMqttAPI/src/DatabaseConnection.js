@@ -133,4 +133,35 @@ module.exports = class DatabaseConnection {
         }
         return passwordsDoMatch;
     }
+
+    async executeQuery(query) {
+        return new Promise((resolve) => {
+            let result = [];
+            // Read all rows from table
+            const request = new Request(
+                query,
+                function (err, rowCount, rows) {
+                    if(err) {
+                        console.err(err)
+                    } else {
+                        console.log(rowCount + ' row(s) returned');
+                    }
+                }
+            );
+            request.on('error', (err) => {
+                console.err(err);
+            })
+            request.on('row', (columns) => {
+                let row = {};
+                columns.forEach((column) => {
+                    row[column.metadata.colName] = column.value;
+                });
+                result.push(row);
+            });
+            request.on('requestCompleted', () => {
+                resolve(result)
+            });
+            this.connection.execSql(request);
+        })
+    }
 }

@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
         try {
             if(!jsonSample.isNull("noiseValue")) {
                 if(jsonSample.getDouble("noiseValue") > 0.0d) {
-
+                    // TODO
                 }
             }
             if(!offline_mode && isRecording) {
@@ -192,12 +192,8 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                     audioRecorder.stopRecording();
                     btnStartStop.setText("Start");
                     btnStartStop.setBackgroundColor(Color.parseColor("#33cc33"));
-
-                    if(!switchOfflineMode.isChecked()) {
-                        mqttClient.disconnect();
-                    }
-
-
+                    mqttClient.disconnect();
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 } else {
                     audioRecorder.startRecording();
                     btnStartStop.setText("Stop");
@@ -226,6 +222,11 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
     public void onResume() {
         super.onResume();
         ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_home);
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
+        if(audioRecorder.isRecording() && useMqtt) {
+            mqttClient.connect();
+        }
     }
     private void initServices() {
         audioRecorder = new AudioRecorder(this);

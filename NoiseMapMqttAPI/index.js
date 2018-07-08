@@ -17,8 +17,23 @@ async function getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, la
   await db.connect(secret.DB_PW);
   const result = await db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
   db.disconnect();
-  const msg = JSON.stringify({ samples: result});
-  mqttClient.publish(topic, msg, {qos: 1, retain: "true"});
+  const msg = JSON.stringify({ samples: result });
+  mqttClient.publish(topic, msg, { qos: 1, retain: "true" });
+}
+async function insertSample(topic, json) {
+  const clientId = topic.replace("clients/","").replace("/newMeasurement","");
+  const username = mapClientIdToUsername[clientId];
+  const insertSampleQuery =  `DECLARE @maxId int;
+  SELECT @maxId = MAX(ID) FROM NOISE_SAMPLE
+  INSERT INTO NOISE_SAMPLE(id, timestamp, noiseValue, latitude, longitude, accuracy, version, createdAt, updatedAt, speed, userName)
+  VALUES(@maxID + 1, '${json.timestamp}', ${json.noiseValue}, ${json.latitude}, ${json.longitude}, ${json.accuracy}, '${json.version}', '${json.createdAt}', '${json.updatedAt}', ${json.speed}, '${username}');`
+  
+  await db.connect(secret.DB_PW);
+  const result = await db.executeQuery(insertSampleQuery);
+  if(!result) {
+    console.error("error while inserting sample");
+  }
+  db.disconnect();
 }
 
 const settings = {
@@ -33,6 +48,7 @@ milliTime = milliTime[0] * 1000 + milliTime[1];
 const mqttClientId = 'NoiseMapApiMqttClient' + milliTime;
 const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: mqttClientId, username: secret.CLIENT_USER, password: secret.CLIENT_PW });
 const db = new DatabaseConnection();
+const mapClientIdToUsername = {};
 
 mqttClient.on('message', (topic, message) => {
   const jsonMsg = message.toString('ascii');
@@ -46,10 +62,7 @@ mqttClient.on('message', (topic, message) => {
   const reSamplesRequest = /^clients\/[^\/]+\/request$/
   const reNewMeasurement = /^clients\/[^\/]+\/newMeasurement$/
   if (topic.match(reNewMeasurement)) {
-    if (!client.user) {
-      return; // not authorized
-    }
-    json.userName = client.user
+    insertSample(topic, json);
   }
   else if (topic.match(reSamplesRequest)) {
     const { longitudeStart, longitudeEnd, latitudeStart, latitudeEnd } = json;
@@ -62,19 +75,23 @@ var authenticate = async (client, username, password, callback) => {
   await db.connect(secret.DB_PW);
   var authorized = await db.checkLogin(username, password);
   db.disconnect();
-  if (authorized) client.user = username;
+  if (authorized) {
+    client.user = username; 
+    mapClientIdToUsername[client.id] = username;
+  }
   callback(null, authorized);
 }
 
 var authorizePublish = (client, topic, payload, callback) => {
-  if (client.id === mqttClientId || 
-     (topic && topic.split('/') && topic.split('/').length > 1)) {
+  if (client.id === mqttClientId ||
+    (topic && topic.split('/') && topic.split('/').length > 1)) {
     callback(null, client.id === mqttClientId || client.id == topic.split('/')[1]);
   }
 }
 
 mqttClient.on('connect', (client) => {
   mqttClient.subscribe(`clients/+/request`, { qos: 0 });
+  mqttClient.subscribe(`clients/+/newMeasurement`, { qos: 0 });
 })
 
 server.on('clientConnected', (client) => {
@@ -82,6 +99,7 @@ server.on('clientConnected', (client) => {
 });
 server.on('clientDisconnected', (client) => {
   console.log('client disconnected', client.id)
+  delete mapClientIdToUsername[client.id];
 })
 // fired when a message is received
 server.on('published', (packet, client) => {
