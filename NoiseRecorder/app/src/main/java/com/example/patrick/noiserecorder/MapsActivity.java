@@ -170,8 +170,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(heatmap != null) {
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
             String transparency = sharedPref.getString("noisemap_tiles_transparency", "0.2");
+            boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
             heatmap.refresh(false);
             heatmap.setAlpha(1.0 - Float.parseFloat(transparency));
+            heatmap.setUseMqtt(useMqtt);
         }
 
     }
@@ -202,11 +204,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         String transparency = sharedPref.getString("noisemap_tiles_transparency", "0.2");
+        boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
         map = googleMap;
         setMapType();
         // TODO
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
-        heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, username, password, this);
+        heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, username, password, useMqtt, this);
         heatmap.setWeekdayFilter("No Filter");
         heatmap.requestSamplesForVisibleArea();
     }

@@ -127,7 +127,7 @@ public final class RestCallFactory {
                     public void onResponse(String response) {
                         try {
                             JSONObject resp = new JSONObject(response);
-                            final String accessToken = resp.getString("access_token"); //TODO delete private var?
+                            final String accessToken = resp.getString("access_token");
                             Bundle b = new Bundle();
                             b.putString("accessToken", accessToken);
                             b.putString("username", username);

@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.content.LocalBroadcastManager;
@@ -124,8 +125,17 @@ public class MainActivity extends AppCompatActivity {
         //TODO move
         String SERVER_API_URL = Config.API_BASE_URL; // TODO HTTPS
         String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
-        JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
-        requestQueue.add(postSample);
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
+
+        if(useMqtt) {
+            // TODO
+            boolean thisIsABreakpoint = true;
+        } else {
+            JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
+            requestQueue.add(postSample);
+        }
     }
 
     @Override

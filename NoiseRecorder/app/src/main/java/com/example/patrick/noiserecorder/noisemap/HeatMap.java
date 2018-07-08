@@ -70,12 +70,10 @@ public class HeatMap implements OnRequestResponseCallback {
 
         double longitudeStart = southWestVisible.longitude;
         double longitudeEnd = northEastVisible.longitude;
-        //TODO config
-        boolean useHttp = false;
-        if(useHttp) {
-            requestSamplesViaHttp(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd);
-        } else {
+        if(useMqtt) {
             requestSamplesViaMqtt(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd);
+        } else {
+            requestSamplesViaHttp(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd);
         }
 
     }
@@ -121,7 +119,8 @@ public class HeatMap implements OnRequestResponseCallback {
     private final MqttAndroidClient mqttAndroidClient;
     private boolean isMqttConnected = false;
     private double prevZoom = 0;
-    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final MapsActivity activity) {
+    private boolean useMqtt;
+    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final boolean useMqtt, final MapsActivity activity) {
         this.map = map;
         map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
             @Override
@@ -134,6 +133,7 @@ public class HeatMap implements OnRequestResponseCallback {
             }
         });
         alpha = initAlpha;
+        this.useMqtt = useMqtt;
         this.accessToken = accessToken;
         this.username = username;
         this.password = password;
@@ -156,6 +156,7 @@ public class HeatMap implements OnRequestResponseCallback {
             }
         });
     }
+    public void setUseMqtt(boolean val) { this.useMqtt = val; }
 
     private void calculateBlur(GoogleMap map) {
         if(provider != null) {
