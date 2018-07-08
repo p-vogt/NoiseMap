@@ -2,7 +2,7 @@
 const mosca = require('mosca');
 const mqtt = require('mqtt');
 const DatabaseConnection = require('./src/DatabaseConnection');
-const DB_PW = require("./secret");
+const secret = require("./secret");
 var pubsubsettings = {
   type: 'redis',
   redis: require('redis'),
@@ -14,7 +14,7 @@ var pubsubsettings = {
 
 async function getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, latitudeEnd) {
 
-  await db.connect(DB_PW);
+  await db.connect(secret.DB_PW);
   const result = await db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
   db.disconnect();
   mqttClient.publish(topic, JSON.stringify({ samples: result }));
@@ -26,7 +26,7 @@ const settings = {
 };
 
 const server = new mosca.Server(settings);
-const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: '0', username: "0", password: "dasPW" });
+const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: '0', username: secret.CLIENT_USER, password: secret.CLIENT_PW });
 const db = new DatabaseConnection();
 
 mqttClient.on('message', (topic, message) => {
@@ -52,40 +52,29 @@ mqttClient.on('message', (topic, message) => {
   }
 })
 // Accepts the connection if the username and password are valid
-var authenticate = (client, username, password, callback) => {
-  var authorized = (password.toString() === 'dasPW');
+var authenticate = async (client, username, password, callback) => {
+  await db.connect(secret.DB_PW);
+  var authorized = await db.checkLogin(username, password);
+  db.disconnect();
   if (authorized) client.user = username;
   callback(null, authorized);
 }
 
 var authorizePublish = (client, topic, payload, callback) => {
-  if (topic.split('/').length > 1) {
-    callback(null, client.user == topic.split('/')[1]);
+  if (topic && topic.split('/') && topic.split('/').length > 1) {
+    callback(null, client.id == topic.split('/')[1]);
   }
 }
 
-function subscribeToClientResponse(clientId) {
-  if (clientId !== '0') {
-    mqttClient.subscribe(`clients/${clientId}/request`, { qos: 0 });
-  }
-}
 mqttClient.on('connect', (client) => {
-  console.log('client connected', client.id);
-  for (var client in server.clients) {
-    if (server.clients.hasOwnProperty(client)) {
-      subscribeToClientResponse(client)
-    }
-  }
+  mqttClient.subscribe(`clients/+/request`, { qos: 0 });
 })
 
 server.on('clientConnected', (client) => {
-  subscribeToClientResponse(client.id)
+  console.log('client connected', client.id)
 });
 server.on('clientDisconnected', (client) => {
-  if (client.id != '0') {
-    mqttClient.unsubscribe(`clients/${client.id}/request`);
-    console.log('client disconnected', client.id);
-  }
+  console.log('client disconnected', client.id)
 })
 // fired when a message is received
 server.on('published', (packet, client) => {

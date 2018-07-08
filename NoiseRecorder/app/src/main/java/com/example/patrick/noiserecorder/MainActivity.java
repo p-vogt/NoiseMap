@@ -64,6 +64,9 @@ public class MainActivity extends AppCompatActivity {
 
                 // open the navigation map
                 case R.id.navigation_map:
+                    if(audioRecorder != null && audioRecorder.isRecording()) {
+                        audioRecorder.stopRecording();
+                    }
                     Bundle b = new Bundle();
                     // pass the accessToken to the new MapActivity
                     intent = new Intent(MainActivity.this, MapsActivity.class);
