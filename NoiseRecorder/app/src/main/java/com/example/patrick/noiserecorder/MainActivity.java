@@ -1,15 +1,12 @@
 package com.example.patrick.noiserecorder;
 
-import android.arch.lifecycle.Lifecycle;
-import android.arch.lifecycle.OnLifecycleEvent;
 import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.PowerManager;
+import java.text.DecimalFormat;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
@@ -24,7 +21,6 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ListView;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.RequestQueue;
@@ -40,7 +36,13 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
+
 public class MainActivity extends AppCompatActivity implements INoiseMapMqttConsumer {
     private static final String TAG = "MainActivity";
     final ArrayList<String> listItems = new ArrayList<>();
@@ -116,9 +118,23 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
             Log.d("onNewMeasurementDone","invalid noise value");
         }
 
-        String dbOutput = "" + jsonSample;
         // plot output TODO move and change output
-        adapter.insert(dbOutput, 0);
+        String output = "";
+        try {
+            String timestamp = jsonSample.getString("timestamp");
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss", Locale.ENGLISH);
+            Date date = format.parse(timestamp);
+            DecimalFormat df = new DecimalFormat("#.00");
+            output +=   "Time:           " + timestamp.substring(11); // remove date
+            output += "\nNoise:          " + df.format(jsonSample.getDouble("noiseValue"));
+            output += "\nLongitude:  " + df.format(jsonSample.getDouble("longitude"));
+            output += "\nLatitude:      " + df.format(jsonSample.getDouble("latitude"));
+            output += "\n";
+        } catch (ParseException | JSONException e) {
+            Log.e("MainActivity", "invalid measurement json: " + jsonSample.toString());
+            return;
+        }
+        adapter.insert(output, 0);
         adapter.notifyDataSetChanged();
     }
 
