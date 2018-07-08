@@ -12,14 +12,15 @@ var pubsubsettings = {
   host: "localhost"
 };
 
+const port = 1883;
 const settings = {
-  port: 1883,
+  port,
   backend: pubsubsettings
 };
 
 const db = new DatabaseConnection(secret.DB_PW);
 
-const serverClient = new MqttServerClient('tcp://127.0.0.1:1883', secret.CLIENT_USER, secret.CLIENT_PW, db); // MqttServerClient
+const serverClient = new MqttServerClient(`tcp://127.0.0.1:${port}`, secret.CLIENT_USER, secret.CLIENT_PW, db);
 const server = new mosca.Server(settings);
 
 // Accepts the connection if the username and password are valid
@@ -41,8 +42,6 @@ var authorizePublish = (client, topic, payload, callback) => {
     callback(null, serverClient && client.id === serverClient.id || client.id == topic.split('/')[1]);
   }
 }
-
-
 
 server.on('clientConnected', (client) => {
   console.log('client connected', client.id)
