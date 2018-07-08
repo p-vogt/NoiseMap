@@ -14,23 +14,23 @@ var pubsubsettings = {
 
 async function getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, latitudeEnd) {
 
-  await db.connect(secret.DB_PW);
+  await db.connect();
   const result = await db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
   db.disconnect();
   const msg = JSON.stringify({ samples: result });
   mqttClient.publish(topic, msg, { qos: 1, retain: "true" });
 }
 async function insertSample(topic, json) {
-  const clientId = topic.replace("clients/","").replace("/newMeasurement","");
+  const clientId = topic.replace("clients/", "").replace("/newMeasurement", "");
   const username = mapClientIdToUsername[clientId];
-  const insertSampleQuery =  `DECLARE @maxId int;
+  const insertSampleQuery = `DECLARE @maxId int;
   SELECT @maxId = MAX(ID) FROM NOISE_SAMPLE
   INSERT INTO NOISE_SAMPLE(id, timestamp, noiseValue, latitude, longitude, accuracy, version, createdAt, updatedAt, speed, userName)
   VALUES(@maxID + 1, '${json.timestamp}', ${json.noiseValue}, ${json.latitude}, ${json.longitude}, ${json.accuracy}, '${json.version}', '${json.createdAt}', '${json.updatedAt}', ${json.speed}, '${username}');`
-  
-  await db.connect(secret.DB_PW);
+
+  await db.connect();
   const result = await db.executeQuery(insertSampleQuery);
-  if(!result) {
+  if (!result) {
     console.error("error while inserting sample");
   }
   db.disconnect();
@@ -47,7 +47,7 @@ milliTime = milliTime[0] * 1000 + milliTime[1];
 
 const mqttClientId = 'NoiseMapApiMqttClient' + milliTime;
 const mqttClient = mqtt.connect('tcp://127.0.0.1:1883', { reconnecting: true, clientId: mqttClientId, username: secret.CLIENT_USER, password: secret.CLIENT_PW });
-const db = new DatabaseConnection();
+const db = new DatabaseConnection(secret.DB_PW);
 const mapClientIdToUsername = {};
 
 mqttClient.on('message', (topic, message) => {
@@ -72,11 +72,11 @@ mqttClient.on('message', (topic, message) => {
 })
 // Accepts the connection if the username and password are valid
 var authenticate = async (client, username, password, callback) => {
-  await db.connect(secret.DB_PW);
+  await db.connect();
   var authorized = await db.checkLogin(username, password);
   db.disconnect();
   if (authorized) {
-    client.user = username; 
+    client.user = username;
     mapClientIdToUsername[client.id] = username;
   }
   callback(null, authorized);

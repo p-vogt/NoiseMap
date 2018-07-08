@@ -4,24 +4,25 @@ const Request = require('tedious').Request;
 
 module.exports = class DatabaseConnection {
 
-    constructor() {
+    constructor(password) {
+        this.password = password
     }
     disconnect() {
         this.connection.close();
     }
-    async connect(password) {
+    async connect() {
         return new Promise((resolve) => {
 
             // Create connection to database
             var config =
             {
                 userName: 'node',
-                password: password,
+                password: this.password,
                 server: 'noisemap.database.windows.net',
                 options:
                 {
-                    database: 'noisemap'
-                    , encrypt: true
+                    database: 'noisemap', 
+                    encrypt: true
                 }
             }
 
@@ -29,15 +30,12 @@ module.exports = class DatabaseConnection {
             // Attempt to connect and execute queries if connection goes through
             this.connection.on('connect', (err) => {
                 if (err) {
-                    console.log(err)
-                }
-                else {
-                    console.log("Connected to db")
+                    console.error(err)
                 }
                 resolve(err);
             });
             this.connection.on('end', (err) => {
-                console.log("Disconnected from db")
+                //Disconnected from db
             });
         });
     }
@@ -143,8 +141,6 @@ module.exports = class DatabaseConnection {
                 function (err, rowCount, rows) {
                     if(err) {
                         console.err(err)
-                    } else {
-                        console.log(rowCount + ' row(s) returned');
                     }
                 }
             );

@@ -32,6 +32,7 @@ public class MqttNoiseMapClient {
         this.username = username;
         this.password = password;
         this.mqttAndroidClient = new MqttAndroidClient(applicationContext, "tcp://noisemap.westeurope.cloudapp.azure.com:1883", clientId);
+
         initMqtt();
     }
 
