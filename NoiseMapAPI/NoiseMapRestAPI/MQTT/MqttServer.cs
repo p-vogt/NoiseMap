@@ -2,13 +2,9 @@
 using MQTTnet.Protocol;
 using MQTTnet.Server;
 using NoiseMapRestAPI.Models;
-using NoiseMapRestAPI.MQTT;
 using System;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
