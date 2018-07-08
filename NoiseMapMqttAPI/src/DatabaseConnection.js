@@ -45,6 +45,7 @@ module.exports = class DatabaseConnection {
         return new Promise((resolve) => {
             let result = [];
             let query = `SELECT * FROM NOISE_SAMPLE WHERE longitude BETWEEN ${longitudeStart} AND ${longitudeEnd} AND latitude BETWEEN ${latitudeStart} AND ${latitudeEnd};`;
+            console.log(query)
             // Read all rows from table
             const request = new Request(
                 query,
