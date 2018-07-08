@@ -11,6 +11,7 @@
     "async": "^2.6.1",
     "cross-env": "^5.2.0",
     "mosca": "^2.8.2",
+    "redis": "^2.8.0",
     "tedious": "^2.6.1"
   },
   "devDependencies": {},
