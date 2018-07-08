@@ -32,13 +32,16 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.patrick.noiserecorder.audioprocessing.AudioRecorder;
 import com.example.patrick.noiserecorder.location.LocationTrackerBroadcastReceiver;
+import com.example.patrick.noiserecorder.network.INoiseMapMqttConsumer;
+import com.example.patrick.noiserecorder.network.MqttNoiseMapClient;
 import com.example.patrick.noiserecorder.network.RestCallFactory;
 
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements INoiseMapMqttConsumer {
     private static final String TAG = "MainActivity";
     final ArrayList<String> listItems = new ArrayList<>();
     ArrayAdapter<String> adapter;
@@ -49,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private RequestQueue requestQueue;
     private BroadcastReceiver messageReceiver;
     private Switch switchOfflineMode;
+    MqttNoiseMapClient mqttClient;
+
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -131,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
 
         if(useMqtt) {
             // TODO
-            boolean thisIsABreakpoint = true;
+            mqttClient.postSample(sampleBody.toString());
         } else {
             JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
             requestQueue.add(postSample);
@@ -153,6 +158,8 @@ public class MainActivity extends AppCompatActivity {
             //TODO
             return;
         }
+        String clientId = "AndroidNoiseMapClient" + System.currentTimeMillis();
+        this.mqttClient = new MqttNoiseMapClient(clientId,username,password, this, getApplicationContext());
 
         initServices();
         requestQueue = Volley.newRequestQueue(this);
@@ -186,6 +193,11 @@ public class MainActivity extends AppCompatActivity {
                     btnStartStop.setText("Start");
                     btnStartStop.setBackgroundColor(Color.parseColor("#33cc33"));
 
+                    if(!switchOfflineMode.isChecked()) {
+                        mqttClient.disconnect();
+                    }
+
+
                 } else {
                     audioRecorder.startRecording();
                     btnStartStop.setText("Stop");
@@ -198,6 +210,8 @@ public class MainActivity extends AppCompatActivity {
                         btnStartStop.setBackgroundColor(Color.parseColor("#ffff00"));
                         //TODO
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    } else {
+                        mqttClient.connect();
                     }
                 }
             }
@@ -221,4 +235,32 @@ public class MainActivity extends AppCompatActivity {
                 messageReceiver, new IntentFilter("new-location"));
     }
 
+    @Override
+    public void onMessageArrived(String topic, MqttMessage message) {
+
+    }
+
+    @Override
+    public void onConnected() {
+        Toast.makeText(this,
+                "MQTT connected",
+                Toast.LENGTH_LONG)
+                .show();
+    }
+
+    @Override
+    public void onConnectionFailed() {
+        Toast.makeText(this,
+                "MQTT connection failed",
+                Toast.LENGTH_LONG)
+                .show();
+    }
+
+    @Override
+    public void onConnectionLost() {
+        Toast.makeText(this,
+                "MQTT disconnected",
+                Toast.LENGTH_LONG)
+                .show();
+    }
 }

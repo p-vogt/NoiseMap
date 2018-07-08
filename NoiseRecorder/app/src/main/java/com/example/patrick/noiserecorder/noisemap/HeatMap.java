@@ -14,6 +14,8 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.patrick.noiserecorder.Config;
 import com.example.patrick.noiserecorder.MapsActivity;
+import com.example.patrick.noiserecorder.network.INoiseMapMqttConsumer;
+import com.example.patrick.noiserecorder.network.MqttNoiseMapClient;
 import com.example.patrick.noiserecorder.network.OnRequestResponseCallback;
 import com.example.patrick.noiserecorder.network.RequestSamplesOptions;
 import com.example.patrick.noiserecorder.network.RestCallFactory;
@@ -27,19 +29,13 @@ import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
 
-import org.eclipse.paho.android.service.MqttAndroidClient;
-import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.IMqttToken;
-import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -50,7 +46,7 @@ import java.util.List;
 import java.util.Locale;
 
 
-public class HeatMap implements OnRequestResponseCallback {
+public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer {
     @Override
     public void onRequestResponseCallback(JSONObject response) {
        boolean success = parseSamples(response);
@@ -88,6 +84,46 @@ public class HeatMap implements OnRequestResponseCallback {
         requestQueue.add(apiRequest);
     }
 
+    @Override
+    public void onMessageArrived(String topic, MqttMessage message) {
+        byte[] payload = message.getPayload();
+        JSONObject json = null;
+        try {
+            String samples;
+            samples = new String(payload, "UTF-8");
+            json = new JSONObject(samples);
+        } catch (JSONException | UnsupportedEncodingException e ) {
+            Log.e("HeatMap", e.getMessage());
+        }
+        parseSamples(json);
+        refresh(true);
+        Log.d("HeatMap", "messageArrived");
+    }
+
+    @Override
+    public void onConnected() {
+        Toast.makeText(activity,
+                "MQTT connected",
+                Toast.LENGTH_LONG)
+                .show();
+    }
+
+    @Override
+    public void onConnectionFailed() {
+        Toast.makeText(activity,
+                "MQTT connection failed",
+                Toast.LENGTH_LONG)
+                .show();
+    }
+
+    @Override
+    public void onConnectionLost() {
+        Toast.makeText(activity,
+                "MQTT disconnected",
+                Toast.LENGTH_LONG)
+                .show();
+    }
+
 
     public enum OverlayType {
         OVERLAY_TILES,
@@ -98,7 +134,9 @@ public class HeatMap implements OnRequestResponseCallback {
     private RequestQueue requestQueue;
     private String weekdayFilter = "";
     private TileOverlay heatmapOverlay;
-    HeatmapTileProvider provider;
+    private HeatmapTileProvider provider;
+    private MqttNoiseMapClient mqttClient;
+
     //TODO
     final int DIRECTION_NORTHEAST = 45;
     final int DIRECTION_SOUTHEAST = DIRECTION_NORTHEAST + 90;
@@ -115,9 +153,6 @@ public class HeatMap implements OnRequestResponseCallback {
     private String password;
     private double alpha;
     private final GoogleMap map;
-    private final String clientId;
-    private final MqttAndroidClient mqttAndroidClient;
-    private boolean isMqttConnected = false;
     private double prevZoom = 0;
     private boolean useMqtt;
     public HeatMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final boolean useMqtt, final MapsActivity activity) {
@@ -138,9 +173,10 @@ public class HeatMap implements OnRequestResponseCallback {
         this.username = username;
         this.password = password;
         this.activity = activity;
-        this.clientId = "ExampleAndroidClient" + System.currentTimeMillis();
-        this.mqttAndroidClient = new MqttAndroidClient(activity.getApplicationContext(), "tcp://noisemap.westeurope.cloudapp.azure.com:1883", clientId);
-        initMqtt();
+        String clientId = "AndroidNoiseMapClient" + System.currentTimeMillis();
+
+        this.mqttClient = new MqttNoiseMapClient(clientId,username,password, this, activity.getApplicationContext());
+        this.mqttClient.connect();
         requestQueue = Volley.newRequestQueue(activity);
 
         map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
@@ -227,69 +263,6 @@ public class HeatMap implements OnRequestResponseCallback {
         }
     }
 
-    private void initMqtt() {
-        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
-            @Override
-            public void connectComplete(boolean reconnect, String serverURI) {
-                isMqttConnected = true;
-                try {
-                    mqttAndroidClient.subscribe("clients/" + clientId + "/response",1);
-                } catch (MqttException e) {
-                    Log.d("MQTT: could not sub", e.getMessage());
-                }
-            }
-
-            @Override
-            public void connectionLost(Throwable cause) {
-                isMqttConnected = false;
-                Log.d("MQTT", "connectionLost");
-            }
-
-            @Override
-            public void messageArrived(String topic, MqttMessage message) throws Exception {
-                byte[] payload = message.getPayload();
-                String samples = new String(payload, "UTF-8");
-                JSONObject json = new JSONObject(samples);
-                parseSamples(json);
-                refresh(true);
-                Log.d("MQTT", "messageArrived");
-            }
-
-            @Override
-            public void deliveryComplete(IMqttDeliveryToken token) {
-                Log.d("MQTT", "deliveryComplete");
-            }
-        });
-
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqttConnectOptions.setCleanSession(false);
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setUserName(username);
-        mqttConnectOptions.setPassword(password.toCharArray());
-        try {
-            mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
-                    disconnectedBufferOptions.setBufferEnabled(true);
-                    disconnectedBufferOptions.setBufferSize(1000);
-                    disconnectedBufferOptions.setPersistBuffer(false);
-                    disconnectedBufferOptions.setDeleteOldestMessages(false);
-                    mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
-
-                }
-
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    Log.d("MQTT", "onFailure");
-                }
-            });
-
-
-        } catch (MqttException ex){
-            Log.d("MQTT: could not connect:", ex.getMessage());
-        }
-    }
 
     private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd) {
         MqttMessage msg = new MqttMessage();
@@ -298,9 +271,7 @@ public class HeatMap implements OnRequestResponseCallback {
         msg.setQos(1);
         msg.setPayload(options.toJSONString().getBytes());
         try {
-            if(isMqttConnected) {
-                mqttAndroidClient.publish("clients/" + clientId + "/request", msg);
-            }
+             mqttClient.request(msg);
         } catch (MqttException e) {
             Log.d("MQTT: could not publish:", e.getMessage());
         }
