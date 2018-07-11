@@ -195,6 +195,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             addPreferencesFromResource(R.xml.pref_measurement);
             setHasOptionsMenu(true);
             bindPreferenceSummaryToValue(findPreference("noisemap_measurement_calibrationOffset"));
+            bindPreferenceSummaryToValue(findPreference("noisemap_measurement_timeBetweenMeasurementsS"));
         }
 
         @Override

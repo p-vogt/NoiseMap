@@ -24,18 +24,21 @@ public class AudioRecorder {
     private LocationServiceConnection serviceConnection = new LocationServiceConnection();
     // with this flag the audio recorder gets started again (at the start of a new measurement)
     private boolean startNewRecording = true;
+    private int timeBetweenMeasurements;
+
     MainActivity callingActivity;
 
     AudioRecord audioRecorder;
     private String timestampOfLastAverageDbA = "";
     private MainActivity caller;
     Intent locationIntent;
-    public AudioRecorder(MainActivity caller, double calibrationOffsetInDb) {
+    public AudioRecorder(MainActivity caller, double calibrationOffsetInDb, int timeBetweenMeasurements) {
         this.callingActivity = caller;
         // Bind to LocalService
         this.caller = caller;
         locationIntent = new Intent(caller, LocationTrackerService.class);
         this.fft = new AudioProcessor(calibrationOffsetInDb);
+        this.timeBetweenMeasurements = timeBetweenMeasurements;
     }
 
     private final Handler recordingHandler = new Handler();
@@ -103,12 +106,14 @@ public class AudioRecorder {
 
         if(currentRecordingTimeInMs >= RecordingConfig.RECORDING_DURATION_IN_MS) {
             finishMeasurement();
-            return RecordingConfig.DELAY_BETWEEN_MEASUREMENTS_IN_MS;
+            return this.timeBetweenMeasurements - RecordingConfig.RECORDING_DURATION_IN_MS;
         }
         return 1;
     }
 
-
+    public void setTimeBetweenMeasurements(int timeInMs) {
+        timeBetweenMeasurements = timeInMs;
+    }
     /**
      * Stops the audio recording.
      */

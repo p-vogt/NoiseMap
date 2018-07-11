@@ -8,4 +8,12 @@
         android:singleLine="true"
         android:title="Calibration offset (dBA)" />
 
+    <ListPreference
+        android:defaultValue="5"
+        android:entries="@array/pref_noisemap_measurement_timeBetweenMeasurements"
+        android:entryValues="@array/pref_noisemap_measurement_timeBetweenMeasurements"
+        android:key="noisemap_measurement_timeBetweenMeasurementsS"
+        android:negativeButtonText="@null"
+        android:positiveButtonText="@null"
+        android:title="Time between measurements (s)" />
 </PreferenceScreen>

@@ -243,7 +243,10 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
         boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
         String calibrationOffsetInDbStr = sharedPref.getString("noisemap_measurement_calibrationOffset", "-1.75f");
         double calibrationOffsetInDb = Double.parseDouble(calibrationOffsetInDbStr);
+        String timeBetweenMeasurementsString= sharedPref.getString("noisemap_measurement_timeBetweenMeasurementsS", "5");
+        int timeBetweenMeasurementsS = Integer.parseInt(timeBetweenMeasurementsString);
         this.audioRecorder.setCalibrationOffset(calibrationOffsetInDb);
+        this.audioRecorder.setTimeBetweenMeasurements(timeBetweenMeasurementsS * 1000);
         if(audioRecorder.isRecording() && useMqtt && !switchOfflineMode.isChecked()) {
             mqttClient.connect();
         }
@@ -252,7 +255,9 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         String calibrationOffsetInDbStr = sharedPref.getString("noisemap_measurement_calibrationOffset", "-1.75f");
         double calibrationOffsetInDb = Double.parseDouble(calibrationOffsetInDbStr);
-        audioRecorder = new AudioRecorder(this, calibrationOffsetInDb);
+        String timeBetweenMeasurementsString= sharedPref.getString("noisemap_measurement_timeBetweenMeasurementsS", "5");
+        int timeBetweenMeasurementsS = Integer.parseInt(timeBetweenMeasurementsString);
+        audioRecorder = new AudioRecorder(this, calibrationOffsetInDb, timeBetweenMeasurementsS * 1000);
         messageReceiver = new LocationTrackerBroadcastReceiver(this, audioRecorder);
         // Register to receive messages.
         LocalBroadcastManager.getInstance(this).registerReceiver(
