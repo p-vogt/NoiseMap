@@ -9,7 +9,7 @@ public class AudioProcessor {
     private double[] a_weighting = new double[RecordingConfig.BLOCK_SIZE_FFT];
     private int numberOfFFTs = 0;
     private double averageDB = 0;
-    private double calibrationOffset_db = 0;
+    private double calibrationOffset_db;
     public AudioProcessor(double calibrationOffset_db) {
         initCalculations();
         this.calibrationOffset_db = calibrationOffset_db;
@@ -66,8 +66,6 @@ public class AudioProcessor {
 
             double real = vals[2*i];
             double imag = vals[2*i+1];
-            // TODO setting + configurable
-            // TODO Window_sample_count/2 correct?
             //763
             double magn = Math.sqrt(real*real+imag*imag);
 
@@ -91,5 +89,9 @@ public class AudioProcessor {
             numberOfFFTs++;
             averageDB += curAverage_dB;
         }
+    }
+
+    public void setCalibrationOffset(double calibrationOffset) {
+        this.calibrationOffset_db = calibrationOffset;
     }
 }

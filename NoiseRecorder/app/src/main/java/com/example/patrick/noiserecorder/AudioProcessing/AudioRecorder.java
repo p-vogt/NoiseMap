@@ -30,13 +30,11 @@ public class AudioRecorder {
     private String timestampOfLastAverageDbA = "";
     private MainActivity caller;
     Intent locationIntent;
-    public AudioRecorder(MainActivity caller) {
+    public AudioRecorder(MainActivity caller, double calibrationOffsetInDb) {
         this.callingActivity = caller;
         // Bind to LocalService
         this.caller = caller;
         locationIntent = new Intent(caller, LocationTrackerService.class);
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(caller);
-        double calibrationOffsetInDb = sharedPref.getFloat("noisemap_measurement_calibrationOffset", -1.75f);
         this.fft = new AudioProcessor(calibrationOffsetInDb);
     }
 
@@ -64,6 +62,9 @@ public class AudioRecorder {
             }
         }
     };
+    public void setCalibrationOffset(double valueInDb) {
+        this.fft.setCalibrationOffset(valueInDb);
+    }
     /**
      * Starts the audio recorder and sets the record starting time.
      */

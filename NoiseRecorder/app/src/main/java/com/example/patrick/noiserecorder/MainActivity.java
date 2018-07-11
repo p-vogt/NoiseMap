@@ -118,7 +118,6 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
             Log.d("onNewMeasurementDone","invalid noise value");
         }
 
-        // plot output TODO move and change output
         String output = "";
         try {
             String timestamp = jsonSample.getString("timestamp");
@@ -240,12 +239,18 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
         ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_home);
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
+        String calibrationOffsetInDbStr = sharedPref.getString("noisemap_measurement_calibrationOffset", "-1.75f");
+        double calibrationOffsetInDb = Double.parseDouble(calibrationOffsetInDbStr);
+        this.audioRecorder.setCalibrationOffset(calibrationOffsetInDb);
         if(audioRecorder.isRecording() && useMqtt) {
             mqttClient.connect();
         }
     }
     private void initServices() {
-        audioRecorder = new AudioRecorder(this);
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        String calibrationOffsetInDbStr = sharedPref.getString("noisemap_measurement_calibrationOffset", "-1.75f");
+        double calibrationOffsetInDb = Double.parseDouble(calibrationOffsetInDbStr);
+        audioRecorder = new AudioRecorder(this, calibrationOffsetInDb);
         messageReceiver = new LocationTrackerBroadcastReceiver(this, audioRecorder);
         // Register to receive messages.
         LocalBroadcastManager.getInstance(this).registerReceiver(
