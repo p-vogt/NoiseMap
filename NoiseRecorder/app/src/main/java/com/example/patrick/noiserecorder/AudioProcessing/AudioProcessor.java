@@ -9,10 +9,10 @@ public class AudioProcessor {
     private double[] a_weighting = new double[RecordingConfig.BLOCK_SIZE_FFT];
     private int numberOfFFTs = 0;
     private double averageDB = 0;
-
-    public AudioProcessor() {
-
+    private double calibrationOffset_db = 0;
+    public AudioProcessor(double calibrationOffset_db) {
         initCalculations();
+        this.calibrationOffset_db = calibrationOffset_db;
     }
 
     private void initCalculations() {
@@ -67,7 +67,6 @@ public class AudioProcessor {
             double real = vals[2*i];
             double imag = vals[2*i+1];
             // TODO setting + configurable
-            double calibration_offset = -1.75; // in dBA
             // TODO Window_sample_count/2 correct?
             //763
             double magn = Math.sqrt(real*real+imag*imag);
@@ -76,7 +75,7 @@ public class AudioProcessor {
             final double amplitudeRef = 0.00002;
             if(magn > 0.0 ) {
                 // 5
-                double dbFreqA = (10.0 * Math.log10(magn*magn*a_weighting[i]/amplitudeRef) + calibration_offset);
+                double dbFreqA = (10.0 * Math.log10(magn*magn*a_weighting[i]/amplitudeRef) + this.calibrationOffset_db);
                 //6
                 dbFreqA = (10.0 * Math.pow(10,dbFreqA/10));
                 // 7a sum in log

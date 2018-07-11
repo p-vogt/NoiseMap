@@ -2,8 +2,10 @@ package com.example.patrick.noiserecorder.audioprocessing;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioRecord;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 import com.example.patrick.noiserecorder.location.LocationServiceConnection;
@@ -15,7 +17,7 @@ import java.util.Calendar;
 
 public class AudioRecorder {
 
-    private AudioProcessor fft = new AudioProcessor();
+    private AudioProcessor fft;
     private double lastAverageDbA = -1.0d;
     boolean isRecording = false;
     private long timeStartedRecordingInMs;
@@ -33,6 +35,9 @@ public class AudioRecorder {
         // Bind to LocalService
         this.caller = caller;
         locationIntent = new Intent(caller, LocationTrackerService.class);
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(caller);
+        double calibrationOffsetInDb = sharedPref.getFloat("noisemap_measurement_calibrationOffset", -1.75f);
+        this.fft = new AudioProcessor(calibrationOffsetInDb);
     }
 
     private final Handler recordingHandler = new Handler();

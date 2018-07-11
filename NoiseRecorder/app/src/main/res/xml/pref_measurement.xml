@@ -1,0 +1,11 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <EditTextPreference
+        android:defaultValue="-1.75"
+        android:inputType="numberSigned|numberDecimal"
+        android:key="noisemap_measurement_calibrationOffset"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="Calibration offset (dBA)" />
+
+</PreferenceScreen>

@@ -1,10 +1,9 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- A 'parent' preference, which enables/disables child preferences (below)
-         when checked/unchecked. -->
     <PreferenceCategory android:title="General">
         <ListPreference
-            android:defaultValue="180"
+            android:defaultValue="Terrain"
             android:entries="@array/pref_noisemap_map_styles"
             android:entryValues="@array/pref_noisemap_map_styles"
             android:key="map_style"
@@ -13,25 +12,19 @@
             android:title="Map style" />
     </PreferenceCategory>
 
-    <!-- Allows the user to choose a ringtone in the 'notification' category. -->
-    <!-- NOTE: This preference will be enabled only when the checkbox above is checked. -->
-    <!-- NOTE: RingtonePreference's summary should be set to its value by the activity code. -->
-
-    <!-- NOTE: This preference will be enabled only when the checkbox above is checked. -->
     <PreferenceCategory android:title="Tiles">
-
         <SwitchPreference
             android:defaultValue="true"
             android:key="noisemap_tiles_show_grid"
             android:title="Show grid" />
         <ListPreference
-        android:defaultValue="180"
-        android:entries="@array/pref_noisemap_map_transparency"
-        android:entryValues="@array/pref_noisemap_map_transparency"
-        android:key="noisemap_tiles_transparency"
-        android:negativeButtonText="@null"
-        android:positiveButtonText="@null"
-        android:title="Tile transparency" />
+            android:defaultValue="0.2"
+            android:entries="@array/pref_noisemap_map_transparency"
+            android:entryValues="@array/pref_noisemap_map_transparency"
+            android:key="noisemap_tiles_transparency"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="Tile transparency" />
     </PreferenceCategory>
     <PreferenceCategory android:title="Heat Map">
 
