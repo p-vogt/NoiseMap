@@ -209,6 +209,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                     btnStartStop.setBackgroundColor(Color.parseColor("#33cc33"));
                     mqttClient.disconnect();
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    switchOfflineMode.setEnabled(true);
                 } else {
                     audioRecorder.startRecording();
                     btnStartStop.setText("Stop");
@@ -224,6 +225,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                     } else {
                         mqttClient.connect();
                     }
+                    switchOfflineMode.setEnabled(false);
                 }
             }
         });
@@ -242,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
         String calibrationOffsetInDbStr = sharedPref.getString("noisemap_measurement_calibrationOffset", "-1.75f");
         double calibrationOffsetInDb = Double.parseDouble(calibrationOffsetInDbStr);
         this.audioRecorder.setCalibrationOffset(calibrationOffsetInDb);
-        if(audioRecorder.isRecording() && useMqtt) {
+        if(audioRecorder.isRecording() && useMqtt && !switchOfflineMode.isChecked()) {
             mqttClient.connect();
         }
     }

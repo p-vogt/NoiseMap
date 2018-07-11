@@ -32,11 +32,13 @@
 
     <ListView
         android:id="@+id/lViewPositions"
-        android:layout_width="363dp"
-        android:layout_height="295dp"
+        android:layout_width="353dp"
+        android:layout_height="346dp"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
+        android:scrollbarAlwaysDrawVerticalTrack="true"
+        android:scrollbars="vertical"
         app:layout_constraintBottom_toTopOf="@+id/btnStartStop"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -47,6 +49,6 @@
         android:layout_height="wrap_content"
         android:text="Offine Mode"
         tools:layout_editor_absoluteX="16dp"
-        tools:layout_editor_absoluteY="50dp" />
+        tools:layout_editor_absoluteY="16dp" />
 
 </android.support.constraint.ConstraintLayout>
