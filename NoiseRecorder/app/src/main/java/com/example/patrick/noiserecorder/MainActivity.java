@@ -142,15 +142,13 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
      * @param sampleBody JSONObject that contains the sample values.
      */
     private void postNewSample(JSONObject sampleBody) {
-        //TODO move
-        String SERVER_API_URL = Config.API_BASE_URL; // TODO HTTPS
+        String SERVER_API_URL = Config.API_BASE_URL;
         String POST_SAMPLE_URL = SERVER_API_URL + "Sample";
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
 
         if(useMqtt) {
-            // TODO
             mqttClient.postSample(sampleBody.toString());
         } else {
             JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
@@ -170,8 +168,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
             username = b.getString("username");
             password = b.getString("password");
         } else {
-            //TODO
-            return;
+            throw new IllegalArgumentException("MainActivity:onCreate");
         }
         String clientId = "AndroidNoiseMapClient" + System.currentTimeMillis();
         this.mqttClient = new MqttNoiseMapClient(clientId,username,password, this, getApplicationContext());
@@ -214,13 +211,11 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                     audioRecorder.startRecording();
                     btnStartStop.setText("Stop");
                     btnStartStop.setBackgroundColor(Color.parseColor("#cc0000"));
-                    //TODO
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     if(switchOfflineMode.isChecked()) {
                         Toast.makeText(MainActivity.this,"!!!OFFLINE MODE ACTIVATED!!!",Toast.LENGTH_LONG).show();
                         btnStartStop.setText("OFFLINE");
                         btnStartStop.setBackgroundColor(Color.parseColor("#ffff00"));
-                        //TODO
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     } else {
                         mqttClient.connect();

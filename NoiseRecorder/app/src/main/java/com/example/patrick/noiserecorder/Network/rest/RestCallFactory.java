@@ -60,7 +60,6 @@ public final class RestCallFactory {
                         obj = new JSONObject(msg);
                         errorMsg = obj.getString("error_description");
                     }
-                    // TODO
                 } catch (UnsupportedEncodingException | JSONException e) {
                     Log.e("createGetRequest", "" + e.getStackTrace());
                     return;
@@ -138,7 +137,6 @@ public final class RestCallFactory {
                             activity.startActivity(intent);
                         } catch (JSONException e) {
                             Log.e(this.getClass().getName(), e.getStackTrace().toString());
-                            // TODO
                         }
                         activity.showProgress(false);
                     }
@@ -299,7 +297,7 @@ public final class RestCallFactory {
                     }
                 }
                 activity.showProgress(false);
-                Toast.makeText(activity, //TODO
+                Toast.makeText(activity,
                         errorMsg,
                         Toast.LENGTH_LONG).show();
             }

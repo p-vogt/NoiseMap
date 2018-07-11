@@ -131,20 +131,13 @@ public class LocationTrackerService extends Service implements ServiceConnection
     }
 
     @Override
-    public void onServiceConnected(ComponentName className, IBinder service) {
-        //TODO
-    }
+    public void onServiceConnected(ComponentName className, IBinder service) { }
 
     @Override
-    public void onServiceDisconnected(ComponentName className) {
-        //TODO
-    }
+    public void onServiceDisconnected(ComponentName className) { }
 
     @Override
-    public void onBindingDied(ComponentName name) {
-        //TODO
-
-    }
+    public void onBindingDied(ComponentName name) { }
 
     /**
      * Class used for the client Binder.  Because we know this service always

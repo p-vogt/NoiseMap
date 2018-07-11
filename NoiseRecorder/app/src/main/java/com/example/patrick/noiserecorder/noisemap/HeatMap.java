@@ -47,6 +47,12 @@ import java.util.Locale;
 
 
 public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer {
+    private class Direction {
+        public final static int NORTHEAST = 45;
+        public final static int SOUTHEAST = NORTHEAST + 90;
+        public final static int SOUTHWEST = SOUTHEAST + 90;
+        public final static int NORTHWEST = SOUTHWEST + 90;
+    }
     @Override
     public void onRequestResponseCallback(JSONObject response) {
        boolean success = parseSamples(response);
@@ -137,11 +143,6 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     private HeatmapTileProvider provider;
     private MqttNoiseMapClient mqttClient;
 
-    //TODO
-    final int DIRECTION_NORTHEAST = 45;
-    final int DIRECTION_SOUTHEAST = DIRECTION_NORTHEAST + 90;
-    final int DIRECTION_SOUTHWEST = DIRECTION_SOUTHEAST + 90;
-    final int DIRECTION_NORTHWEST = DIRECTION_SOUTHWEST + 90;
     private OverlayType overlayType = OverlayType.OVERLAY_TILES;
 
     public void setOverlayType(OverlayType overlayType) {
@@ -315,8 +316,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                 }
             }
         } catch (JSONException e) {
-
-            return false; // TODO invalid response
+            return false; // invalid response
         }
         return true;
     }
@@ -372,7 +372,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
 
         double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / Config.NUMBER_OF_TILES_WIDTH / 2;
         double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / (2*radius);
-        LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
+        LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), Direction.SOUTHEAST);
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
         double offsetLat =  2 * (start.latitude - northWestVisible.latitude);
         if(fullRefresh) {
@@ -396,7 +396,6 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
 
                     LatLng center = new LatLng(start.latitude + heightCounter * offsetLat, start.longitude + widthCounter * offsetLong);
 
-                    // TODO cache
                     double meanNoise = -1.0d;
                     double normalizedNoise = -1.0d;
                     if (fullRefresh) {
@@ -435,14 +434,6 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                     provider = new HeatmapTileProvider.Builder()
                             .weightedData(weightedSamples)
                             .build();
-
-                    // TODO own gradient?
-                    // Create the gradient.
-                    int[] colors = {
-                            Color.rgb(102, 225, 0), // green
-                            Color.rgb(255, 0, 0)    // red
-                    };
-
                     heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
                 }
                 calculateBlur(map);
@@ -510,10 +501,10 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
 
         // The diagonal length of the tile from the center to an edge (diag) is sqrt(2)*radius
         // since r^2 + r^2 = diag^2
-        LatLng targetNorthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHWEST);
-        LatLng targetNorthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_NORTHEAST);
-        LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHWEST);
-        LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), DIRECTION_SOUTHEAST);
+        LatLng targetNorthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), Direction.NORTHWEST);
+        LatLng targetNorthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), Direction.NORTHEAST);
+        LatLng targetSouthWest = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), Direction.SOUTHWEST);
+        LatLng targetSouthEast = SphericalUtil.computeOffset(center, radius * Math.sqrt(2), Direction.SOUTHEAST);
         int fillColor = 0;
         boolean clickable= false;
         if(meanNoise > 0.0) {
