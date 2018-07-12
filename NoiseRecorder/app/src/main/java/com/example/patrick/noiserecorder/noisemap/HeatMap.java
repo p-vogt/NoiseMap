@@ -30,6 +30,7 @@ import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.commons.math3.stat.ranking.TiesStrategy;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONArray;
@@ -50,6 +51,31 @@ import noisemap.NoiseMap;
 
 
 public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer {
+    public static class TimePoint {
+        public int hour;
+        public int minute;
+        public TimePoint(int hour, int minute) {
+            this.hour = hour;
+            this.minute = minute;
+        }
+
+        public boolean isGreaterThan(TimePoint time) {
+            return this.hour > time.hour
+                    || this.hour == time.hour && this.minute > time.minute;
+        }
+
+        public boolean equals(TimePoint time) {
+            return this.minute == time.minute && this.hour == time.hour;
+        }
+
+        @Override
+        public String toString() {
+            String text = this.hour >= 10 ? "" + this.hour : "0" + this.hour;
+            text +=":";
+            text += this.minute >= 10 ? "" + this.minute : "0" + this.minute;
+            return text;
+        }
+    }
     private class Direction {
         public final static int NORTHEAST = 45;
         public final static int SOUTHEAST = NORTHEAST + 90;
@@ -76,14 +102,14 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         double longitudeStart = southWestVisible.longitude;
         double longitudeEnd = northEastVisible.longitude;
         if(useMqtt) {
-            requestSamplesViaMqtt(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd);
+            requestSamplesViaMqtt(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd, this.getStartTime(), this.getEndTime());
         } else {
-            requestSamplesViaHttp(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd);
+            requestSamplesViaHttp(latitudeStart, latitudeEnd, longitudeStart, longitudeEnd, this.getStartTime(), this.getEndTime());
         }
 
     }
 
-    private void requestSamplesViaHttp(double latitudeStart, double latitudeEnd, double longitudeStart, double longitudeEnd) {
+    private void requestSamplesViaHttp(double latitudeStart, double latitudeEnd, double longitudeStart, double longitudeEnd, TimePoint start, TimePoint end) {
         String apiUrl = Config.API_BASE_URL + "Sample";
         apiUrl += "?latitudeStart=" + latitudeStart;
         apiUrl += "&latitudeEnd=" + latitudeEnd;
@@ -132,7 +158,18 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         refresh(true);
         Log.d("HeatMap", "messageArrived");
     }
-
+    public void setStartTime(TimePoint startTime) {
+        this.startTime = startTime;
+    }
+    public void setEndTime(TimePoint endTime) {
+        this.endTime = endTime;
+    }
+    public TimePoint getStartTime() {
+        return startTime;
+    }
+    public TimePoint getEndTime() {
+        return endTime;
+    }
     @Override
     public void onConnected() {
         Toast.makeText(activity,
@@ -162,6 +199,9 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         OVERLAY_TILES,
         OVERLAY_HEATMAP
     }
+
+    private TimePoint startTime = new TimePoint(0,0);
+    private TimePoint endTime = new TimePoint(24, 0);
 
     private MapsActivity activity;
     private RequestQueue requestQueue;
@@ -292,9 +332,9 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
 
 
-    private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd) {
+    private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd, TimePoint start, TimePoint end) {
         MqttMessage msg = new MqttMessage();
-        RequestSamplesOptions options = new RequestSamplesOptions(longitudeStart,longitudeEnd,latitudeStart,latitudeEnd);
+        RequestSamplesOptions options = new RequestSamplesOptions(longitudeStart,longitudeEnd,latitudeStart,latitudeEnd, start, end);
         msg.setRetained(true);
         msg.setQos(1);
         msg.setPayload(options.toJSONString().getBytes());

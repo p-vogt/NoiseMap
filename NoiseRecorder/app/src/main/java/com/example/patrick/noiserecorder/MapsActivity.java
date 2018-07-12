@@ -1,5 +1,6 @@
 package com.example.patrick.noiserecorder;
 
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -14,8 +15,13 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.TimePicker;
+import android.widget.Toast;
+
+import java.util.Calendar;
 
 import com.example.patrick.noiserecorder.noisemap.HeatMap;
+import com.example.patrick.noiserecorder.noisemap.HeatMap.TimePoint;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -133,7 +139,49 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        final Button btnStartTime = (Button) findViewById(R.id.btn_startTime);
+        btnStartTime.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Calendar currentTime = Calendar.getInstance();
+                int hour = currentTime.get(Calendar.HOUR_OF_DAY);
+                int minute = currentTime.get(Calendar.MINUTE);
 
+                TimePickerDialog timePicker;
+                timePicker = new TimePickerDialog(MapsActivity.this, new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePicker timePicker, int selectedHour, int selectedMinute) {
+                        TimePoint newTime = new TimePoint(selectedHour, selectedMinute);
+                        heatmap.setStartTime(newTime);
+                        btnStartTime.setText(newTime.toString());
+                    }
+                }, hour, minute, true);
+                timePicker.setTitle("Select Time");
+                timePicker.show();
+            }
+        });
+
+        final Button btnEndTime = (Button) findViewById(R.id.btn_endTime);
+        btnEndTime.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Calendar currentTime = Calendar.getInstance();
+                int hour = currentTime.get(Calendar.HOUR_OF_DAY);
+                int minute = currentTime.get(Calendar.MINUTE);
+
+                TimePickerDialog timePicker;
+                timePicker = new TimePickerDialog(MapsActivity.this, new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePicker timePicker, int selectedHour, int selectedMinute) {
+                        TimePoint newTime = new TimePoint(selectedHour, selectedMinute);
+                        heatmap.setEndTime(new TimePoint(selectedHour, selectedMinute));
+                        btnEndTime.setText(newTime.toString());
+                    }
+                }, hour, minute, true);
+                timePicker.setTitle("Select Time");
+                timePicker.show();
+            }
+        });
     }
     private void setMapType() {
         if(map == null) {
@@ -208,7 +256,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map = googleMap;
         setMapType();
         // TODO
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,15.0f));
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,15.5f));
         heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, username, password, useMqtt, this);
         heatmap.setWeekdayFilter("No Filter");
         heatmap.requestSamplesForVisibleArea();

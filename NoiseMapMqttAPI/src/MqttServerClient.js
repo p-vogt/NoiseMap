@@ -37,9 +37,9 @@ module.exports = class MqttServerClient {
                 this.insertSample(topic, json);
             }
             else if (topic.match(reSamplesRequest)) {
-                const { longitudeStart, longitudeEnd, latitudeStart, latitudeEnd } = json;
+                const { longitudeStart, longitudeEnd, latitudeStart, latitudeEnd, startTime, endTime } = json;
                 console.log("samples request:", json);
-                this.getSamples(topic.replace("request", "response"), longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
+                this.getSamples(topic.replace("request", "response"), longitudeStart, longitudeEnd, latitudeStart, latitudeEnd, startTime, endTime);
             }
         })
 
@@ -86,18 +86,18 @@ module.exports = class MqttServerClient {
                 });
         });
     }
-    async getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, latitudeEnd) {
+    async getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, latitudeEnd, startTime, endTime) {
 
         await this.db.connect();
-        const result = await this.db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
+        const result = await this.db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd, startTime, endTime);
         this.db.disconnect();
         let msg = "";
-        if(USE_PROTOBUF) {
+        if (USE_PROTOBUF) {
             msg = await this.jsonResultToProtobuf(result);
         } else {
-            msg = JSON.stringify({ samples: result }); 
+            msg = JSON.stringify({ samples: result });
         }
-        if(msg) {
+        if (msg) {
             this.mqttClient.publish(topic, msg, { qos: 1, retain: "true" });
         }
     }

@@ -21,7 +21,7 @@ module.exports = class DatabaseConnection {
                 server: 'noisemap.database.windows.net',
                 options:
                 {
-                    database: 'noisemap', 
+                    database: 'noisemap',
                     encrypt: true
                 }
             }
@@ -39,14 +39,51 @@ module.exports = class DatabaseConnection {
             });
         });
     }
-    async querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd) {
+
+    async querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd, startTime, endTime) {
         return new Promise((resolve) => {
             let result = [];
-            let query = `SELECT timestamp, noiseValue, longitude, latitude FROM NOISE_SAMPLE WHERE longitude BETWEEN ${longitudeStart} AND ${longitudeEnd} AND latitude BETWEEN ${latitudeStart} AND ${latitudeEnd};`;
+            if (startTime.indexOf(":") < 0 || endTime.indexOf(":") < 0) {
+                resolve([]);
+            }
+            let timeFilter = "";
+            const startTimeSplitted = startTime.split(":");
+            const endTimeSplitted = endTime.split(":");
+            const start = {
+                hour: startTimeSplitted[0],
+                minute: startTimeSplitted[1]
+            }
+            const end = {
+                hour: endTimeSplitted[0],
+                minute: endTimeSplitted[1]
+            }
+            if (start.hour !== end.hour && start.hour < end.hour) {
+                timeFilter = `( 
+                    DATEPART(HOUR, timestamp) = ${start.hour} AND DATEPART(MINUTE, timestamp) >= ${start.minute}
+                OR
+                    DATEPART(HOUR, timestamp) > ${start.hour} AND DATEPART(HOUR, timestamp) < ${end.hour}
+                OR     
+                    DATEPART(HOUR, timestamp) = ${end.hour} AND DATEPART(MINUTE, timestamp) <= ${end.minute}
+                )`
+            } else if (start.hour === end.hour) {
+                timeFilter = `(DATEPART(HOUR, timestamp) = ${start.hour} AND DATEPART(MINUTE, timestamp) >= ${start.minute} AND DATEPART(MINUTE, timestamp) <= ${end.minute})`
+            } else { //start > end 
+                timeFilter = `(        
+                    DATEPART(HOUR, timestamp) = ${end.hour} AND DATEPART(MINUTE, timestamp) >= ${end.minute}
+                OR
+                    DATEPART(HOUR, timestamp) > ${end.hour}
+                OR
+                    DATEPART(HOUR, timestamp) = ${start.hour} AND DATEPART(MINUTE, timestamp) < ${start.minute}
+                OR
+                    DATEPART(HOUR, timestamp) < ${start.hour}
+                )`
+            }
+            const locationFilter = `(longitude BETWEEN ${longitudeStart} AND ${longitudeEnd} AND latitude BETWEEN ${latitudeStart} AND ${latitudeEnd})`;
+            const query = `SELECT timestamp, noiseValue, longitude, latitude FROM NOISE_SAMPLE WHERE ${locationFilter} AND ${timeFilter};`;
             // Read all rows from table
             const request = new Request(
                 query,
-                (err, rowCount, rows) => {}
+                (err, rowCount, rows) => { }
             );
             request.on('error', (err) => {
                 console.err(err);
@@ -71,7 +108,7 @@ module.exports = class DatabaseConnection {
             // Read all rows from table
             const request = new Request(
                 query,
-                (err, rowCount, rows) => {}
+                (err, rowCount, rows) => { }
             );
             request.on('error', (err) => {
                 console.err(err);
@@ -111,8 +148,8 @@ module.exports = class DatabaseConnection {
             }
         }
 
-        if (storedSubKeyString === '') { 
-            return false 
+        if (storedSubKeyString === '') {
+            return false
         }
 
         const nodeCrypto = crypto.pbkdf2Sync(password, new Buffer(saltString, 'hex'), 1000, 256, 'sha1');
@@ -122,7 +159,7 @@ module.exports = class DatabaseConnection {
         // The first 64 bytes of the derived key should
         // match the stored sub key
         const passwordsDoMatch = derivedKeyOctets.indexOf(storedSubKeyString) === 0;
-        if(!passwordsDoMatch) {
+        if (!passwordsDoMatch) {
             console.error("passwords do not match!");
         }
         return passwordsDoMatch;
@@ -135,7 +172,7 @@ module.exports = class DatabaseConnection {
             const request = new Request(
                 query,
                 function (err, rowCount, rows) {
-                    if(err) {
+                    if (err) {
                         console.err(err)
                     }
                 }
