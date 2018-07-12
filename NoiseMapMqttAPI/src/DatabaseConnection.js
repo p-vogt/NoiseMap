@@ -57,7 +57,10 @@ module.exports = class DatabaseConnection {
                 hour: endTimeSplitted[0],
                 minute: endTimeSplitted[1]
             }
-            if (start.hour !== end.hour && start.hour < end.hour) {
+            if(start.hour === end.hour && start.minute === end.minute) {
+                timeFilter ="1=1" // always true
+            }
+            else if (start.hour !== end.hour && start.hour < end.hour) {
                 timeFilter = `( 
                     DATEPART(HOUR, timestamp) = ${start.hour} AND DATEPART(MINUTE, timestamp) >= ${start.minute}
                 OR
