@@ -1,4 +1,5 @@
 const mqtt = require('mqtt');
+const USE_PROTOBUF = true; // change to false to use plain JSON
 
 module.exports = class MqttServerClient {
     // properties:
@@ -47,14 +48,58 @@ module.exports = class MqttServerClient {
             this.mqttClient.subscribe(`clients/+/newMeasurement`, { qos: 0 });
         })
     }
+    async jsonResultToProtobuf(json) {
+        return new Promise((resolve) => {
+            const protobuf = require('protobufjs');
+            protobuf.load("../proto/src/NoiseMap.proto")
+                .then((root) => {
+                    // Obtain a message type
+                    const Samples = root.lookupType("noisemap.Samples");
+                    const Sample = root.lookupType("noisemap.Samples.Sample");
 
+                    let samples = [];
+                    json.forEach(element => {
+                        const subPayload = {
+                            timestamp: element.timestamp.toISOString(),
+                            longitude: element.longitude,
+                            latitude: element.latitude,
+                            noiseValue: element.noiseValue
+                        };
+                        let errMsg = Sample.verify(subPayload);
+                        if (!errMsg) {
+                            samples.push(Sample.create(subPayload))
+                        }
+                    });
+                    const payload = { samples };
+                    const errMsg = Sample.verify(payload);
+                    if (errMsg) {
+                        throw Error(errMsg);
+                    }
+
+                    const message = Samples.create(payload)
+                    const buffer = Samples.encode(message).finish();
+                    resolve(buffer)
+                })
+                .catch(err => {
+                    console.error(err);
+                    resolve();
+                });
+        });
+    }
     async getSamples(topic, longitudeStart, longitudeEnd, latitudeStart, latitudeEnd) {
 
         await this.db.connect();
         const result = await this.db.querySamples(longitudeStart, longitudeEnd, latitudeStart, latitudeEnd);
         this.db.disconnect();
-        const msg = JSON.stringify({ samples: result });
-        this.mqttClient.publish(topic, msg, { qos: 1, retain: "true" });
+        let msg = "";
+        if(USE_PROTOBUF) {
+            msg = await this.jsonResultToProtobuf(result);
+        } else {
+            msg = JSON.stringify({ samples: result }); 
+        }
+        if(msg) {
+            this.mqttClient.publish(topic, msg, { qos: 1, retain: "true" });
+        }
     }
     async insertSample(topic, json) {
         const clientId = topic.replace("clients/", "").replace("/newMeasurement", "");

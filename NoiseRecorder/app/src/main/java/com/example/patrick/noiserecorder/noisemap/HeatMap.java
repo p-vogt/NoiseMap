@@ -28,6 +28,7 @@ import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -44,6 +45,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import noisemap.NoiseMap;
 
 
 public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer {
@@ -90,15 +93,39 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         requestQueue.add(apiRequest);
     }
 
+    private JSONObject protobufSamplesToJSONObject(NoiseMap.Samples samples) throws JSONException {
+
+        JSONObject json = new JSONObject();
+        json.put("samples",new JSONArray());
+        for(NoiseMap.Samples.Sample sample : samples.getSamplesList()) {
+            JSONObject jsonSample = new JSONObject();
+            try {
+                jsonSample.put("latitude", sample.getLatitude());
+                jsonSample.put("longitude", sample.getLongitude());
+                jsonSample.put("timestamp", sample.getTimestamp());
+                jsonSample.put("noiseValue", sample.getNoiseValue());
+            } catch(JSONException e) {
+                continue;
+            }
+            json.getJSONArray("samples").put(jsonSample);
+        }
+        return json;
+    }
     @Override
     public void onMessageArrived(String topic, MqttMessage message) {
         byte[] payload = message.getPayload();
+        boolean useProto = true;
+        Log.i("onMessageArrived", "msg size: " + payload.length);
         JSONObject json = null;
         try {
-            String samples;
-            samples = new String(payload, "UTF-8");
-            json = new JSONObject(samples);
-        } catch (JSONException | UnsupportedEncodingException e ) {
+            if(useProto) {
+                    NoiseMap.Samples samples = NoiseMap.Samples.parseFrom(payload);
+                    json = protobufSamplesToJSONObject(samples);
+            } else {
+                    String samples = new String(payload, "UTF-8");
+                    json = new JSONObject(samples);
+            }
+        } catch (JSONException | InvalidProtocolBufferException | UnsupportedEncodingException  e ) {
             Log.e("HeatMap", e.getMessage());
         }
         parseSamples(json);

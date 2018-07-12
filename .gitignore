@@ -1,6 +1,7 @@
 NoiseMapMqttAPI/node_modules/
 NoiseMapMqttAPI/secret.js
 Backup/
+protoc/
 # Built application files
 *.apk
 *.ap_

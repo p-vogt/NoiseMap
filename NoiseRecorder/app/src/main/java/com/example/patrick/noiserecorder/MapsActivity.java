@@ -194,7 +194,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     //TODO
-    LatLng bielefeld = new LatLng(52.0382444, 8.5257916);
+    LatLng bielefeld = new LatLng(52.036282, 8.527138);
 
     /**
      * Manipulates the map once available.
@@ -208,7 +208,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map = googleMap;
         setMapType();
         // TODO
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,16.0f));
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,15.0f));
         heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, username, password, useMqtt, this);
         heatmap.setWeekdayFilter("No Filter");
         heatmap.requestSamplesForVisibleArea();

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package noisemap;
+
+// Message 
+message Samples {
+    message Sample {
+        string timestamp = 1;
+        float longitude = 2;
+        float latitude = 3;
+        float noiseValue = 4;
+    }
+    repeated Sample samples = 1;
+}
