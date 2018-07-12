@@ -2,11 +2,8 @@ package com.example.patrick.noiserecorder.audioprocessing;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.media.AudioRecord;
 import android.os.Handler;
-import android.preference.PreferenceManager;
-import android.widget.Toast;
 
 import com.example.patrick.noiserecorder.location.LocationServiceConnection;
 import com.example.patrick.noiserecorder.location.LocationTrackerService;
