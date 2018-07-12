@@ -81,9 +81,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="5dp"
-                    android:background="@color/colorPrimary"
                     android:layout_marginTop="5dp"
-                    android:text="Start"/>
+                    android:background="@color/timePickerBtn"
+                    android:text="Start" />
                 <TextView
                     android:id="@+id/tv_endTime"
                     android:layout_width="wrap_content"
@@ -98,9 +98,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="5dp"
-                    android:background="@color/colorPrimary"
                     android:layout_marginTop="5dp"
-                    android:text="End"/>
+                    android:background="@color/timePickerBtn"
+                    android:text="End" />
             </LinearLayout>
         </LinearLayout>
 
