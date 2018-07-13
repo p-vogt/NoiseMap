@@ -1,8 +1,17 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <PreferenceCategory android:title="Network">
+
+    </PreferenceCategory>
     <SwitchPreference
         android:defaultValue="true"
         android:key="noisemap_general_useMqtt"
         android:title="Use MQTT" />
+    <SwitchPreference
+        android:defaultValue="true"
+        android:dependency="noisemap_general_useMqtt"
+        android:key="noisemap_general_useProtocolBuffers"
+        android:title="Use Protocol Buffers" />
 
 </PreferenceScreen>

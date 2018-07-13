@@ -213,7 +213,8 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     @Override
     public void onMessageArrived(String topic, MqttMessage message) {
         byte[] payload = message.getPayload();
-        boolean useProto = true;
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
+        boolean useProto = sharedPref.getBoolean("noisemap_general_useProtocolBuffers", true);
         Log.i("onMessageArrived", "msg size: " + payload.length);
         JSONObject json = null;
         try {
@@ -226,6 +227,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             }
         } catch (JSONException | InvalidProtocolBufferException | UnsupportedEncodingException  e ) {
             Log.e("HeatMap", e.getMessage());
+            Toast.makeText(activity,"Invalid response!",Toast.LENGTH_LONG).show();
         }
         parseSamples(json);
         refresh(true);
@@ -278,8 +280,11 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
     private void calculateBlur(GoogleMap map) {
         if(provider != null) {
+            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
+            String blurFactorStr = sharedPref.getString("noisemap_heatmap_blur", "3.0");
+            int blurFactor = Integer.parseInt(blurFactorStr);
             double curZoom = map.getCameraPosition().zoom;
-            int blurRadius = (int) (curZoom*3); // TODO
+            int blurRadius = (int) (curZoom*blurFactor);
             if(blurRadius > 50) blurRadius = 50;
             else if(blurRadius < 10) blurRadius = 10;
             provider.setRadius(blurRadius);
@@ -406,7 +411,6 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
 
     private void addPolygonBorderAnimation(final Polygon polygon) {
-        addPolygonBorderAnimation(null);
         final long start = SystemClock.uptimeMillis();
         final long animationDurationInMs = 1000;
         final long animationIntervalInMs = 100;
@@ -436,13 +440,18 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     public void refresh(boolean fullRefresh) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isGridVisible = sharedPref.getBoolean("noisemap_tiles_show_grid", false);
-
+        String tilesCount = sharedPref.getString("noisemap_general_tileCountWidth", "20");
+        String minStr = sharedPref.getString("noisemap_general_minNoise", "45");
+        String maxStr = sharedPref.getString("noisemap_general_maxNoise", "80");
+        float minNoise = Integer.parseInt(minStr);
+        float maxNoise = Integer.parseInt(maxStr);
+        int numberOfTilesWidth = Integer.parseInt(tilesCount);
         map.clear(); // TODO check: does this clear the onClickListener for the polygons?
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
         LatLng northWestVisible = new LatLng(northEastVisible.latitude,southWestVisible.longitude);
 
-        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / Config.NUMBER_OF_TILES_WIDTH / 2;
+        double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / numberOfTilesWidth / 2;
         double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / (2*radius);
         LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), Direction.SOUTHEAST);
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
@@ -452,7 +461,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             cachedPolygonOptions.clear();
             cachedWeightedSamples.clear();
             cachedMeanNoise.clear();
-            initMatrix(Config.NUMBER_OF_TILES_WIDTH, numOfRectsHeight);
+            initMatrix(numberOfTilesWidth, numOfRectsHeight);
             clusterSamples(northWestVisible, offsetLong, offsetLat);
 
             // run through the whole map grid (vertically)
@@ -464,7 +473,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                 //
                 // <--->
                 //
-                for (int widthCounter = 0; widthCounter < Config.NUMBER_OF_TILES_WIDTH; widthCounter++) {
+                for (int widthCounter = 0; widthCounter < numberOfTilesWidth; widthCounter++) {
 
                     LatLng center = new LatLng(start.latitude + heightCounter * offsetLat, start.longitude + widthCounter * offsetLong);
 
@@ -472,14 +481,12 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                     double normalizedNoise = -1.0d;
                     if (fullRefresh) {
                         meanNoise = getMeanNoise(heightCounter, widthCounter);
-                        double max = Config.MAX_DB_NORMALIZED;
-                        double min = Config.MIN_DB_NORMALIZED;
-                        normalizedNoise = getNormalizedNoise(meanNoise, max, min);
+                        normalizedNoise = getNormalizedNoise(meanNoise, maxNoise, minNoise);
                         WeightedLatLng curWLatLng = new WeightedLatLng(center, normalizedNoise);
                         cachedWeightedSamples.add(curWLatLng);
                         cachedMeanNoise.add(meanNoise);
                     } else {
-                        int index = heightCounter * Config.NUMBER_OF_TILES_WIDTH + widthCounter;
+                        int index = heightCounter * numberOfTilesWidth + widthCounter;
                         if (index < cachedWeightedSamples.size()) {
                             normalizedNoise = cachedWeightedSamples.get(index).getIntensity();
                             meanNoise = cachedMeanNoise.get(index);
@@ -542,11 +549,14 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
 
     private double getNormalizedNoise(double meanNoise, double max, double min) {
+        if(Double.compare(meanNoise, -1.0) == 0) {
+            return 0.0;
+        }
         double normalizedNoise = (meanNoise - min) * 1/(max-min);
         if(normalizedNoise > 1) {
             normalizedNoise = 1;
-        } else if(normalizedNoise < 0) {
-            normalizedNoise = 0;
+        } else if(normalizedNoise <= 0.05) {
+            normalizedNoise = 0.05;
         }
         return normalizedNoise;
     }

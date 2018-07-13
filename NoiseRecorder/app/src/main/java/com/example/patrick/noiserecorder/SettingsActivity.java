@@ -218,7 +218,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             super.onCreate(savedInstanceState);
             addPreferencesFromResource(R.xml.pref_noise_map);
             setHasOptionsMenu(true);
-
+            bindPreferenceSummaryToValue(findPreference("noisemap_general_minNoise"));
+            bindPreferenceSummaryToValue(findPreference("noisemap_general_maxNoise"));
+            bindPreferenceSummaryToValue(findPreference("noisemap_general_tileCountWidth"));
+            bindPreferenceSummaryToValue(findPreference("noisemap_heatmap_blur"));
             bindPreferenceSummaryToValue(findPreference("map_style"));
             bindPreferenceSummaryToValue(findPreference("noisemap_tiles_transparency"));
         }

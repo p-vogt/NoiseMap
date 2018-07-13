@@ -10,6 +10,31 @@
             android:negativeButtonText="@null"
             android:positiveButtonText="@null"
             android:title="Map style" />
+        <EditTextPreference
+            android:defaultValue="20"
+            android:digits="0123456789"
+            android:inputType="number"
+            android:key="noisemap_general_tileCountWidth"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Number of tiles (horizontally)" />
+        <EditTextPreference
+            android:defaultValue="45"
+            android:digits="0123456789."
+            android:inputType="number"
+            android:key="noisemap_general_minNoise"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Min noise (dBA)" />
+        <EditTextPreference
+            android:defaultValue="80"
+            android:digits="0123456789."
+            android:inputType="number"
+            android:key="noisemap_general_maxNoise"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Max noise (dBA)" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Tiles">
@@ -27,7 +52,14 @@
             android:title="Tile transparency" />
     </PreferenceCategory>
     <PreferenceCategory android:title="Heat Map">
-
+        <EditTextPreference
+            android:defaultValue="3"
+            android:digits="0123456789."
+            android:inputType="number"
+            android:key="noisemap_heatmap_blur"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Blur factor" />
     </PreferenceCategory>
 
 </PreferenceScreen>
