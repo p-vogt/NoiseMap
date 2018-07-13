@@ -1,7 +1,6 @@
 package com.example.patrick.noiserecorder.noisemap;
 
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
@@ -30,7 +29,6 @@ import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.apache.commons.math3.stat.ranking.TiesStrategy;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONArray;
@@ -51,6 +49,11 @@ import noisemap.NoiseMap;
 
 
 public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer {
+
+    public enum OverlayType {
+        OVERLAY_TILES,
+        OVERLAY_HEATMAP
+    }
     public static class TimePoint {
         public int hour;
         public int minute;
@@ -76,19 +79,89 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             return text;
         }
     }
+
     private class Direction {
         public final static int NORTHEAST = 45;
         public final static int SOUTHEAST = NORTHEAST + 90;
         public final static int SOUTHWEST = SOUTHEAST + 90;
         public final static int NORTHWEST = SOUTHWEST + 90;
     }
+
+    private TimePoint startTime = new TimePoint(0,0);
+    private TimePoint endTime = new TimePoint(0, 0);
+
+    private MapsActivity activity;
+    private RequestQueue requestQueue;
+    private String weekdayFilter = "No Filter";
+    private TileOverlay heatmapOverlay;
+    private HeatmapTileProvider provider;
+    private MqttNoiseMapClient mqttClient;
+    private OverlayType overlayType = OverlayType.OVERLAY_TILES;
+    private String accessToken;
+    private double alpha;
+    private final GoogleMap map;
+    private double prevZoom = 0;
+    private boolean useMqtt;
+    private List<Polygon> polygons = new ArrayList<>();
+    private List<PolygonOptions> cachedPolygonOptions = new ArrayList<>();
+    // used to stop the animation of a clicked polygon when another polygon has been clicked
+    private Polygon lastClickedPolygon;
+
+    private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
+    private List<Sample> samples = new ArrayList<>();
+
+    private List<WeightedLatLng> cachedWeightedSamples = new ArrayList<>();
+    private List<Double> cachedMeanNoise = new ArrayList<>();
+
+    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final boolean useMqtt, final MapsActivity activity) {
+        this.map = map;
+        map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+            @Override
+            public void onCameraMove() {
+                double curZoom = map.getCameraPosition().zoom;
+                if(curZoom != prevZoom) {
+                    prevZoom = curZoom;
+                    calculateBlur(map);
+                }
+            }
+        });
+        alpha = initAlpha;
+        this.useMqtt = useMqtt;
+        this.accessToken = accessToken;
+        this.activity = activity;
+        String clientId = "AndroidNoiseMapClient" + System.currentTimeMillis();
+
+        this.mqttClient = new MqttNoiseMapClient(clientId,username,password, this, activity.getApplicationContext());
+        if(useMqtt) {
+            this.mqttClient.connect();
+        }
+        requestQueue = Volley.newRequestQueue(activity);
+
+        map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
+            public void onPolygonClick(final Polygon polygon) {
+                String displayText = "" + polygon.getTag();
+                Toast.makeText(activity,
+                        displayText,
+                        Toast.LENGTH_LONG)
+                        .show();
+
+                setLastClickedPolygon(polygon);
+                addPolygonBorderAnimation(polygon);
+            }
+        });
+    }
+
+    public void setOverlayType(OverlayType overlayType) {
+        this.overlayType = overlayType;
+    }
+
     @Override
     public void onRequestResponseCallback(JSONObject response) {
        boolean success = parseSamples(response);
         if(success) {
             refresh(true);
         } else {
-            Toast.makeText(activity,"Error parsing the JSON sample response",Toast.LENGTH_LONG).show();
+            Toast.makeText(activity,"Error while parsing the response",Toast.LENGTH_LONG).show();
 
         }
     }
@@ -195,73 +268,14 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
 
 
-    public enum OverlayType {
-        OVERLAY_TILES,
-        OVERLAY_HEATMAP
+    public void setUseMqtt(boolean val) {
+        this.useMqtt = val;
+        if(useMqtt) {
+            this.mqttClient.connect();
+        } else {
+            this.mqttClient.disconnect();
+        }
     }
-
-    private TimePoint startTime = new TimePoint(0,0);
-    private TimePoint endTime = new TimePoint(24, 0);
-
-    private MapsActivity activity;
-    private RequestQueue requestQueue;
-    private String weekdayFilter = "";
-    private TileOverlay heatmapOverlay;
-    private HeatmapTileProvider provider;
-    private MqttNoiseMapClient mqttClient;
-
-    private OverlayType overlayType = OverlayType.OVERLAY_TILES;
-
-    public void setOverlayType(OverlayType overlayType) {
-        this.overlayType = overlayType;
-    }
-
-    private String accessToken;
-    private String username;
-    private String password;
-    private double alpha;
-    private final GoogleMap map;
-    private double prevZoom = 0;
-    private boolean useMqtt;
-    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final boolean useMqtt, final MapsActivity activity) {
-        this.map = map;
-        map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
-            @Override
-            public void onCameraMove() {
-                double curZoom = map.getCameraPosition().zoom;
-                if(curZoom != prevZoom) {
-                    prevZoom = curZoom;
-                    calculateBlur(map);
-                }
-            }
-        });
-        alpha = initAlpha;
-        this.useMqtt = useMqtt;
-        this.accessToken = accessToken;
-        this.username = username;
-        this.password = password;
-        this.activity = activity;
-        String clientId = "AndroidNoiseMapClient" + System.currentTimeMillis();
-
-        this.mqttClient = new MqttNoiseMapClient(clientId,username,password, this, activity.getApplicationContext());
-        this.mqttClient.connect();
-        requestQueue = Volley.newRequestQueue(activity);
-
-        map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
-            public void onPolygonClick(final Polygon polygon) {
-                String displayText = "" + polygon.getTag();
-                Toast.makeText(activity,
-                        displayText,
-                        Toast.LENGTH_LONG)
-                        .show();
-
-                setLastClickedPolygon(polygon);
-                addPolygonBorderAnimation(polygon);
-            }
-        });
-    }
-    public void setUseMqtt(boolean val) { this.useMqtt = val; }
-
     private void calculateBlur(GoogleMap map) {
         if(provider != null) {
             double curZoom = map.getCameraPosition().zoom;
@@ -275,14 +289,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
     }
 
-    private List<Polygon> polygons = new ArrayList<>();
-    private List<PolygonOptions> cachedPolygonOptions = new ArrayList<>();
-    // used to stop the animation of a clicked polygon when another polygon has been clicked
-    private Polygon lastClickedPolygon ;
-    private List<List<List<Double>>> noiseMatrix = new ArrayList<>();
-    private List<Sample> samples = new ArrayList<>();
-    private List<WeightedLatLng> cachedWeightedSamples = new ArrayList<>();
-    private List<Double> cachedMeanNoise = new ArrayList<>();
+
     private void setLastClickedPolygon(Polygon poly) {
         lastClickedPolygon = poly;
     };
@@ -331,8 +338,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
     }
 
-
-    private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd, TimePoint start, TimePoint end) {
+    private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd, TimePoint start, final TimePoint end) {
         MqttMessage msg = new MqttMessage();
         RequestSamplesOptions options = new RequestSamplesOptions(longitudeStart,longitudeEnd,latitudeStart,latitudeEnd, start, end);
         msg.setRetained(true);
@@ -345,7 +351,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
 
     }
-    public boolean parseSamples(JSONObject json) {
+    public boolean parseSamples(final JSONObject json) {
         samples.clear();
         JSONArray sampleArray;
         try {
@@ -387,7 +393,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
         return true;
     }
-    private void initMatrix(double NUM_OF_RECTS_WIDTH, double numOfRectsHeight) {
+    private void initMatrix(final double NUM_OF_RECTS_WIDTH, final double numOfRectsHeight) {
         noiseMatrix.clear();
         for(int i = 0; i < numOfRectsHeight; i++) {
             List<List<Double>> row = new ArrayList<>();
@@ -400,6 +406,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
 
     private void addPolygonBorderAnimation(final Polygon polygon) {
+        addPolygonBorderAnimation(null);
         final long start = SystemClock.uptimeMillis();
         final long animationDurationInMs = 1000;
         final long animationIntervalInMs = 100;
@@ -425,14 +432,12 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             }
         });
     }
-    static int refreshCounter = 0;
     //TODO refactor
     public void refresh(boolean fullRefresh) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isGridVisible = sharedPref.getBoolean("noisemap_tiles_show_grid", false);
 
         map.clear(); // TODO check: does this clear the onClickListener for the polygons?
-        refreshCounter++;
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
         LatLng northWestVisible = new LatLng(northEastVisible.latitude,southWestVisible.longitude);
@@ -518,14 +523,16 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             }
         }
 
-        if( isNoisematrixEmpty()) {
+        if(isNoisematrixEmpty()) {
             Toast.makeText(activity,"No data!",Toast.LENGTH_LONG).show();
         }
     }
-    private boolean isNoisematrixEmpty() {
-        for(int i = 0; i < noiseMatrix.size(); i++) {
-            for (int j = 0; j < noiseMatrix.get(i).size(); j++){
 
+    private boolean isNoisematrixEmpty() {
+        int sizeOfNoiseMatrix = noiseMatrix.size();
+
+        for(int i = 0; i < sizeOfNoiseMatrix; i++) {
+            for (int j = 0; j < noiseMatrix.get(i).size(); j++){
                 if(noiseMatrix.get(i).get(j).size() != 0) {
                     return false;
                 }
@@ -533,6 +540,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
         return true;
     }
+
     private double getNormalizedNoise(double meanNoise, double max, double min) {
         double normalizedNoise = (meanNoise - min) * 1/(max-min);
         if(normalizedNoise > 1) {
@@ -563,7 +571,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         fillColor = (a << 24) | (red << 16 ) | (green<<8) | blue;
         return fillColor;
     }
-    @NonNull
+
     private PolygonOptions createPolygonOptions(double radius, LatLng center, double meanNoise, double normalizedNoise, double alpha) {
 
         // The diagonal length of the tile from the center to an edge (diag) is sqrt(2)*radius
@@ -589,7 +597,6 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         return polygonOptions;
     }
 
-    @NonNull
     private Polygon addPolygonToMap(double meanNoise, PolygonOptions polygonOptions) {
         Polygon poly = map.addPolygon(polygonOptions);
         if(meanNoise > 0d) {
@@ -601,6 +608,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     public void setWeekdayFilter(String weekday) {
         weekdayFilter = weekday;
     }
+
     public void setAlpha(double alpha) {
         // update polygons
         for(Polygon poly : polygons) {
