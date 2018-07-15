@@ -3,9 +3,9 @@ import org.jtransforms.fft.DoubleFFT_1D;
 
 
 public class AudioProcessor {
-
-    final DoubleFFT_1D fft = new DoubleFFT_1D(RecordingConfig.BLOCK_SIZE_FFT);
-    double window_function[] = new double[RecordingConfig.BLOCK_SIZE_FFT];
+    private static final double REFERENCE_LOG = Math.log10(0.00002);
+    private final DoubleFFT_1D fft = new DoubleFFT_1D(RecordingConfig.BLOCK_SIZE_FFT);
+    private double window_function[] = new double[RecordingConfig.BLOCK_SIZE_FFT];
     private double[] a_weighting = new double[RecordingConfig.BLOCK_SIZE_FFT];
     private int numberOfFFTs = 0;
     private double averageDB = 0;
@@ -21,7 +21,7 @@ public class AudioProcessor {
     }
     private void calculateHannWindow() {
         for(int i = 0; i < RecordingConfig.BLOCK_SIZE_FFT; i++) {
-            double hanningTemp = (2*Math.PI * i) / (RecordingConfig.BLOCK_SIZE_FFT - 1 );
+            double hanningTemp = (2*Math.PI * i) / (RecordingConfig.BLOCK_SIZE_FFT - 1);
             window_function[i] = (1 - Math.cos(hanningTemp)) * 0.5;
         }
     }
@@ -31,7 +31,7 @@ public class AudioProcessor {
             double f = i * RecordingConfig.FREQUENCY_RESOLUTION;
             double f2 = f * f;
             double f4 = f2 * f2;
-            //TODO ref
+            //DIN EN 61672-1: approximation based on http://www.sengpielaudio.com/BerechnungDerBewertungsfilter.pdf
             a_weighting[i] = (12200 * 12200 * f4) / ((f2 + 20.6 * 20.6) * (f2 + 12200 * 12200) * Math.sqrt(f2 + 107.7 * 107.7) * Math.sqrt(f2 + 737.9 * 737.9));
         }
     }
@@ -60,20 +60,18 @@ public class AudioProcessor {
         fft.realForward(vals);
 
         double sumOfAmplitudes = 0;
-
         // only half of the fft block size, because we now have real + imag values
         for (int i = 0; i < RecordingConfig.BLOCK_SIZE_FFT/2; i++) {
 
             double real = vals[2*i];
             double imag = vals[2*i+1];
-            //763
+            //4
             double magn = Math.sqrt(real*real+imag*imag);
 
             // threshold of the human hearing = reference for the db calculation
-            final double amplitudeRef = 0.00002;
             if(magn > 0.0 ) {
                 // 5
-                double dbFreqA = (10.0 * Math.log10(magn*magn*a_weighting[i]/amplitudeRef) + this.calibrationOffset_db);
+                double dbFreqA = (10.0 * (Math.log10(magn*magn*a_weighting[i]) - REFERENCE_LOG) + this.calibrationOffset_db);
                 //6
                 dbFreqA = (10.0 * Math.pow(10,dbFreqA/10));
                 // 7a sum in log
