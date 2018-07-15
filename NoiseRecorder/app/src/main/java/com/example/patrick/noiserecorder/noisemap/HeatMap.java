@@ -160,8 +160,8 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             refresh(true);
         } else {
             Toast.makeText(activity,"Error while parsing the response",Toast.LENGTH_LONG).show();
-
         }
+        activity.activateRefreshButton();
     }
     public void requestSamplesForVisibleArea() {
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
@@ -223,12 +223,13 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                     String samples = new String(payload, "UTF-8");
                     json = new JSONObject(samples);
             }
+            parseSamples(json);
+            refresh(true);
         } catch (JSONException | InvalidProtocolBufferException | UnsupportedEncodingException  e ) {
             Log.e("HeatMap", e.getMessage());
             Toast.makeText(activity,"Invalid response!",Toast.LENGTH_LONG).show();
         }
-        parseSamples(json);
-        refresh(true);
+        activity.activateRefreshButton();
         Log.d("HeatMap", "messageArrived");
     }
     public void setStartTime(TimePoint startTime) {
@@ -257,6 +258,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                 "MQTT connection failed",
                 Toast.LENGTH_LONG)
                 .show();
+        activity.activateRefreshButton();
     }
 
     @Override
@@ -265,6 +267,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                 "MQTT disconnected",
                 Toast.LENGTH_LONG)
                 .show();
+        activity.activateRefreshButton();
     }
 
 

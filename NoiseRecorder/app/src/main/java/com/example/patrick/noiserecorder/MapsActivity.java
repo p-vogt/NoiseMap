@@ -27,16 +27,19 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TimerTask;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private String accessToken;
     private String username;
     private String password;
-
+    private Button btnRefresh;
+    private Button btnToggleMapOverlay;
     private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -87,16 +90,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        final Button btnRefresh = (Button) findViewById(R.id.refresh_map);
+        btnRefresh = (Button) findViewById(R.id.refresh_map);
+        btnToggleMapOverlay = (Button) findViewById(R.id.toggleMapOverlay);
+
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if(heatmap != null) {
+                    btnRefresh.setEnabled(false);
+                    btnToggleMapOverlay.setEnabled(false);
                     refreshData();
+
                 }
             }
         });
-        final Button btnToggleMapOverlay = (Button) findViewById(R.id.toggleMapOverlay);
+
         btnToggleMapOverlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -246,7 +254,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             heatmap.requestSamplesForVisibleArea();
         }
     }
-
+    public void activateRefreshButton() {
+        btnRefresh.setEnabled(true);
+        btnToggleMapOverlay.setEnabled(true);
+    }
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.

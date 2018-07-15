@@ -34,18 +34,15 @@ public final class RestCallFactory {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        JSONObject resp;
+                        JSONObject resp = new JSONObject();
                         try {
-                            if(response.equals("[]")) {
-                                caller.onRequestResponseCallback(new JSONObject());
-                            } else {
+                            if(!response.equals("[]")) {
                                 resp = new JSONObject(response);
-                                caller.onRequestResponseCallback(resp);
                             }
-
                         } catch (JSONException e) {
                             Log.e("createGetRequest", "" + e.getStackTrace());
                         }
+                        caller.onRequestResponseCallback(resp);
                     }
                 }, new Response.ErrorListener() {
             @Override
@@ -60,9 +57,8 @@ public final class RestCallFactory {
                     }
                 } catch (UnsupportedEncodingException | JSONException e) {
                     Log.e("createGetRequest", "" + e.getStackTrace());
-                    return;
-
                 }
+                caller.onRequestResponseCallback(new JSONObject());
             }
         })
         {
