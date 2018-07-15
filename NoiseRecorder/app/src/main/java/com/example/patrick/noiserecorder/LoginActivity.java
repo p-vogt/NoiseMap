@@ -64,6 +64,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        this.setTitle("Login");
         setContentView(R.layout.activity_login);
         requestQueue = Volley.newRequestQueue(this);
         ActivityCompat.requestPermissions(LoginActivity.this,
