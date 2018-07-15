@@ -217,10 +217,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setMapType();
         if(heatmap != null) {
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-            String transparency = sharedPref.getString("noisemap_tiles_transparency", "0.2");
+            String transparencyStr = sharedPref.getString("noisemap_tiles_transparency", "0.2");
             boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
             heatmap.refresh(false);
-            heatmap.setAlpha(1.0 - Float.parseFloat(transparency));
+            float transparency = 0.2f;
+            try {
+                transparency = Float.parseFloat(transparencyStr);
+            } catch (NumberFormatException e) {
+                Toast.makeText(this,"Invalid tile transparency setting!",Toast.LENGTH_LONG).show();
+            }
+            heatmap.setAlpha(1.0 - transparency);
             heatmap.setUseMqtt(useMqtt);
         }
 
@@ -248,14 +254,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-        String transparency = sharedPref.getString("noisemap_tiles_transparency", "0.2");
+        String transparencyStr = sharedPref.getString("noisemap_tiles_transparency", "0.2");
         boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
         map = googleMap;
         setMapType();
         // could be changed to the current location of the user
         LatLng startLocation = new LatLng(52.036282, 8.527138);
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(startLocation,15.5f));
-        heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, username, password, useMqtt, this);
+        float transparency = 0.2f;
+        try {
+            transparency = Float.parseFloat(transparencyStr);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this,"Invalid tile transparency setting!",Toast.LENGTH_LONG).show();
+        }
+        heatmap = new HeatMap(map, 1.0 - transparency, accessToken, username, password, useMqtt, this);
         heatmap.setWeekdayFilter("No Filter");
         heatmap.requestSamplesForVisibleArea();
     }
