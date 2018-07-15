@@ -50,13 +50,11 @@ public final class RestCallFactory {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                // TODO this is a dummy from LoginActivity
-                String msg = "";
                 JSONObject obj;
                 String errorMsg = "unbekannter Fehler";
                 try {
                     if(error != null && error.networkResponse != null) {
-                        msg = new String(error.networkResponse.data, "UTF-8");
+                        String msg = new String(error.networkResponse.data, "UTF-8");
                         obj = new JSONObject(msg);
                         errorMsg = obj.getString("error_description");
                     }
@@ -65,7 +63,6 @@ public final class RestCallFactory {
                     return;
 
                 }
-
             }
         })
         {
@@ -86,15 +83,12 @@ public final class RestCallFactory {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                // TODO is a dummy, also gets here when no response is beeing sent
-                String msg = "";
                 try {
                     if(error != null && error.networkResponse != null) {
-                        msg = new String(error.networkResponse.data, "UTF-8");
+                        String msg = new String(error.networkResponse.data, "UTF-8");
                     }
                 } catch (UnsupportedEncodingException e) {
                     Log.e("createPostSampleRequest", "onErrorResponse" + e.getStackTrace());
-                    return;
                 }
             }
         }) {
@@ -143,7 +137,7 @@ public final class RestCallFactory {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                String msg = "";
+                String msg;
                 JSONObject obj;
                 String errorMsg = "unknown error";
                 if (error instanceof NetworkError) {
@@ -189,7 +183,7 @@ public final class RestCallFactory {
                     }
                 }
                 activity.showProgress(false);
-                Toast.makeText(activity, //TODO
+                Toast.makeText(activity,
                         errorMsg,
                         Toast.LENGTH_LONG).show();
             }
@@ -221,7 +215,7 @@ public final class RestCallFactory {
         if(password == null) throw new IllegalAccessException("password");
         if(confirmPassword == null) throw new IllegalAccessException("confirmPassword");
 
-        JSONObject jsonBody = new JSONObject(); // TODO
+        JSONObject jsonBody = new JSONObject();
         try {
             jsonBody.put("username", username);
             jsonBody.put("password", password);
@@ -234,8 +228,10 @@ public final class RestCallFactory {
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        // TODO login user?
                         activity.showProgress(false);
+                        Toast.makeText(activity,
+                                "Success",
+                                Toast.LENGTH_LONG).show();
                     }
                 }, new Response.ErrorListener() {
             @Override

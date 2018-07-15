@@ -241,9 +241,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    //TODO
-    LatLng bielefeld = new LatLng(52.036282, 8.527138);
-
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
@@ -255,8 +252,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
         map = googleMap;
         setMapType();
-        // TODO
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(bielefeld,15.5f));
+        // could be changed to the current location of the user
+        LatLng startLocation = new LatLng(52.036282, 8.527138);
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(startLocation,15.5f));
         heatmap = new HeatMap(map, 1.0 - Float.parseFloat(transparency), accessToken, username, password, useMqtt, this);
         heatmap.setWeekdayFilter("No Filter");
         heatmap.requestSamplesForVisibleArea();

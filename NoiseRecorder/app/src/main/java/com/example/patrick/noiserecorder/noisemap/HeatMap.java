@@ -4,7 +4,6 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -41,7 +40,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -364,31 +362,44 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             int arrayLen = sampleArray.length();
             for(int i = 0; i < arrayLen; i++) {
                 if (sampleArray.get(i) instanceof JSONObject) {
-
-                    //TODO convert to Sample, extend sample class
-                    JSONObject curObject = (JSONObject)sampleArray.get(i);
-                    if(curObject != null) {
-                        if(!curObject.isNull(("longitude"))) {
-                            double longitude = curObject.getDouble("longitude");
-                            if(!curObject.isNull(("latitude"))) {
-                                double latitude = curObject.getDouble("latitude");
-                                if(!curObject.isNull(("noiseValue"))) {
-                                    double noise = curObject.getDouble("noiseValue");
-                                    if(!curObject.isNull(("timestamp"))) {
-                                        String timestamp = curObject.getString("timestamp");
-                                        DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss", Locale.ENGLISH);
-                                        Date date;
-                                        try {
-                                            date = format.parse(timestamp);
-                                        } catch (ParseException e) {
-                                            // ignore sample since it is invalid
-                                            continue;
-                                        }
-                                        LatLng position = new LatLng(latitude, longitude);
-                                        samples.add(new Sample(position, noise, date));
-                                    }
-                                }
+                    boolean isJsonValid = true;
+                    JSONObject curObject = (JSONObject) sampleArray.get(i);
+                    if (curObject != null) {
+                        Sample newSample = new Sample();
+                        double longitude = -1.0;
+                        double latitude = -1.0;
+                        if (!curObject.isNull(("longitude"))) {
+                            longitude = curObject.getDouble("longitude");
+                        } else {
+                            isJsonValid = false;
+                        }
+                        if (isJsonValid && !curObject.isNull(("latitude"))) {
+                            latitude = curObject.getDouble("latitude");
+                        } else {
+                            isJsonValid = false;
+                        }
+                        if (isJsonValid && !curObject.isNull(("noiseValue"))) {
+                            newSample.noise = curObject.getDouble("noiseValue");
+                        } else {
+                            isJsonValid = false;
+                        }
+                        if (isJsonValid && !curObject.isNull(("timestamp"))) {
+                            String timestamp = curObject.getString("timestamp");
+                            DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss", Locale.ENGLISH);
+                            try {
+                                newSample.timestamp = format.parse(timestamp);
+                            } catch (ParseException e) {
+                                isJsonValid = false;
                             }
+                        } else {
+                            isJsonValid = false;
+                        }
+                        if (!isJsonValid) {
+                            // ignore sample since it is invalid
+                            continue;
+                        } else {
+                            newSample.position = new LatLng(latitude, longitude);
+                            samples.add(newSample);
                         }
                     }
                 }
@@ -436,106 +447,126 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             }
         });
     }
-    //TODO refactor
+
     public void refresh(boolean fullRefresh) {
+
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isGridVisible = sharedPref.getBoolean("noisemap_tiles_show_grid", false);
+        map.clear();
+        if(fullRefresh) {
+            performFullMapRefresh(fullRefresh);
+        }
+        if(overlayType == OverlayType.OVERLAY_HEATMAP) {
+            updateHeatmapOverlay();
+        } else if(overlayType == OverlayType.OVERLAY_TILES) {
+            updateTileOverlay(isGridVisible);
+        }
+        if(isNoiseMatrixEmpty()) {
+            Toast.makeText(activity,"No data!",Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void performFullMapRefresh(boolean fullRefresh) {
+
+        // load preferences
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
         String tilesCount = sharedPref.getString("noisemap_general_tileCountWidth", "20");
         String minStr = sharedPref.getString("noisemap_general_minNoise", "45");
         String maxStr = sharedPref.getString("noisemap_general_maxNoise", "80");
         float minNoise = Integer.parseInt(minStr);
         float maxNoise = Integer.parseInt(maxStr);
         int numberOfTilesWidth = Integer.parseInt(tilesCount);
-        map.clear(); // TODO check: does this clear the onClickListener for the polygons?
+
+        // geo. calculations
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
         LatLng northWestVisible = new LatLng(northEastVisible.latitude,southWestVisible.longitude);
-
         double radius = SphericalUtil.computeDistanceBetween(northWestVisible,northEastVisible) / numberOfTilesWidth / 2;
-        double numOfRectsHeight =SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / (2*radius);
         LatLng start = SphericalUtil.computeOffset(northWestVisible, radius * Math.sqrt(2), Direction.SOUTHEAST);
         double offsetLong =  2 * (start.longitude - northWestVisible.longitude);
         double offsetLat =  2 * (start.latitude - northWestVisible.latitude);
-        if(fullRefresh) {
-            polygons.clear();
-            cachedPolygonOptions.clear();
-            cachedWeightedSamples.clear();
-            cachedMeanNoise.clear();
-            initMatrix(numberOfTilesWidth, numOfRectsHeight);
-            clusterSamples(northWestVisible, offsetLong, offsetLat);
+        double numOfRectanglesHeight = SphericalUtil.computeDistanceBetween(northWestVisible, southWestVisible) / (2*radius);
 
-            // run through the whole map grid (vertically)
-            //  ^
-            //  |
-            //  v
-            for (int heightCounter = 0; heightCounter < numOfRectsHeight; heightCounter++) {
-                // run through the whole map grid (horizontally)
-                //
-                // <--->
-                //
-                for (int widthCounter = 0; widthCounter < numberOfTilesWidth; widthCounter++) {
+        initMapCache(numberOfTilesWidth, numOfRectanglesHeight);
+        clusterSamples(northWestVisible, offsetLong, offsetLat);
 
-                    LatLng center = new LatLng(start.latitude + heightCounter * offsetLat, start.longitude + widthCounter * offsetLong);
+        // run through the whole map grid (vertically)
+        //  ^
+        //  |
+        //  v
+        for (int heightCounter = 0; heightCounter < numOfRectanglesHeight; heightCounter++) {
+            // run through the whole map grid (horizontally)
+            //
+            // <--->
+            //
+            for (int widthCounter = 0; widthCounter < numberOfTilesWidth; widthCounter++) {
 
-                    double meanNoise = -1.0d;
-                    double normalizedNoise = -1.0d;
-                    if (fullRefresh) {
-                        meanNoise = getMeanNoise(heightCounter, widthCounter);
-                        normalizedNoise = getNormalizedNoise(meanNoise, maxNoise, minNoise);
-                        WeightedLatLng curWLatLng = new WeightedLatLng(center, normalizedNoise);
-                        cachedWeightedSamples.add(curWLatLng);
-                        cachedMeanNoise.add(meanNoise);
-                    } else {
-                        int index = heightCounter * numberOfTilesWidth + widthCounter;
-                        if (index < cachedWeightedSamples.size()) {
-                            normalizedNoise = cachedWeightedSamples.get(index).getIntensity();
-                            meanNoise = cachedMeanNoise.get(index);
-                        }
+                LatLng center = new LatLng(start.latitude + heightCounter * offsetLat, start.longitude + widthCounter * offsetLong);
+
+                double meanNoise = -1.0d;
+                double normalizedNoise = -1.0d;
+                if (fullRefresh) {
+                    meanNoise = getMeanNoise(heightCounter, widthCounter);
+                    normalizedNoise = getNormalizedNoise(meanNoise, maxNoise, minNoise);
+                    WeightedLatLng curWLatLng = new WeightedLatLng(center, normalizedNoise);
+                    cachedWeightedSamples.add(curWLatLng);
+                    cachedMeanNoise.add(meanNoise);
+                } else {
+                    int index = heightCounter * numberOfTilesWidth + widthCounter;
+                    if (index < cachedWeightedSamples.size()) {
+                        normalizedNoise = cachedWeightedSamples.get(index).getIntensity();
+                        meanNoise = cachedMeanNoise.get(index);
                     }
+                }
 
-                    // add tiles
-                    PolygonOptions polyOptions = createPolygonOptions(radius, center, meanNoise, normalizedNoise, alpha);
-                    cachedPolygonOptions.add(polyOptions);
-                }
+                // add tiles
+                PolygonOptions polyOptions = createPolygonOptions(radius, center, meanNoise, normalizedNoise, alpha);
+                cachedPolygonOptions.add(polyOptions);
             }
-        }
-        if(overlayType == OverlayType.OVERLAY_HEATMAP) {
-            if(cachedWeightedSamples != null && cachedWeightedSamples.size() > 0) {
-                Collection weightedSamples = new ArrayList();
-                for(WeightedLatLng sample : cachedWeightedSamples) {
-                    Double curVal = sample.getIntensity();
-                    if(!Double.isNaN(curVal) && curVal > 0) {
-                        weightedSamples.add(sample);
-                    }
-
-                }
-                if(weightedSamples.size() > 0) {
-                    provider = new HeatmapTileProvider.Builder()
-                            .weightedData(weightedSamples)
-                            .build();
-                    heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
-                }
-                calculateBlur(map);
-            }
-        } else if(overlayType == OverlayType.OVERLAY_TILES) {
-            int counter = 0;
-            polygons.clear();
-            for(PolygonOptions option : cachedPolygonOptions) {
-                double meanNoise = cachedMeanNoise.get(counter);
-                if(isGridVisible || meanNoise > 0.0d) {
-                    Polygon poly = addPolygonToMap(meanNoise, option);
-                    polygons.add(poly);
-                }
-                counter++;
-            }
-        }
-
-        if(isNoisematrixEmpty()) {
-            Toast.makeText(activity,"No data!",Toast.LENGTH_LONG).show();
         }
     }
 
-    private boolean isNoisematrixEmpty() {
+    private void initMapCache(int numberOfTilesWidth, double numOfRectsHeight) {
+        polygons.clear();
+        cachedPolygonOptions.clear();
+        cachedWeightedSamples.clear();
+        cachedMeanNoise.clear();
+        initMatrix(numberOfTilesWidth, numOfRectsHeight);
+    }
+
+    private void updateTileOverlay(boolean isGridVisible) {
+        int counter = 0;
+        polygons.clear();
+        for(PolygonOptions option : cachedPolygonOptions) {
+            double meanNoise = cachedMeanNoise.get(counter);
+            if(isGridVisible || meanNoise > 0.0d) {
+                Polygon poly = addPolygonToMap(meanNoise, option);
+                polygons.add(poly);
+            }
+            counter++;
+        }
+    }
+
+    private void updateHeatmapOverlay() {
+        if(cachedWeightedSamples != null && cachedWeightedSamples.size() > 0) {
+            Collection weightedSamples = new ArrayList();
+            for(WeightedLatLng sample : cachedWeightedSamples) {
+                Double curVal = sample.getIntensity();
+                if(!Double.isNaN(curVal) && curVal > 0) {
+                    weightedSamples.add(sample);
+                }
+            }
+            if(weightedSamples.size() > 0) {
+                provider = new HeatmapTileProvider.Builder()
+                        .weightedData(weightedSamples)
+                        .build();
+                heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+            }
+            calculateBlur(map);
+        }
+    }
+
+    private boolean isNoiseMatrixEmpty() {
         int sizeOfNoiseMatrix = noiseMatrix.size();
 
         for(int i = 0; i < sizeOfNoiseMatrix; i++) {

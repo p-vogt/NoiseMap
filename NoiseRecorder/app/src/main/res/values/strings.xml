@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">NoiseRecorder</string>
+    <string name="app_name">Login</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
@@ -15,7 +15,7 @@
     <string name="permission_rationale">"Contacts permissions are needed for providing email
         completions."
     </string>
-    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_main">Measurement</string>
     <string name="title_home">Measurement</string>
     <string name="title_dashboard">Noise Map</string>
     <string name="title_notifications">Settings</string>

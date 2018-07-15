@@ -105,17 +105,8 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
 
         boolean offline_mode = switchOfflineMode.isChecked();
         boolean isRecording = audioRecorder.isRecording();
-        try {
-            if(!jsonSample.isNull("noiseValue")) {
-                if(jsonSample.getDouble("noiseValue") > 0.0d) {
-                    // TODO
-                }
-            }
-            if(!offline_mode && isRecording) {
-                postNewSample(jsonSample);
-            }
-        } catch(JSONException ex) {
-            Log.d("onNewMeasurementDone","invalid noise value");
+        if(!offline_mode && isRecording) {
+            postNewSample(jsonSample);
         }
 
         String output = "";
