@@ -279,7 +279,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     private void calculateBlur(GoogleMap map) {
         if(provider != null) {
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
-            String blurFactorStr = sharedPref.getString("noisemap_heatmap_blur", "3.0");
+            String blurFactorStr = sharedPref.getString("noisemap_heatmap_blur", "3");
             int blurFactor = Integer.parseInt(blurFactorStr);
             double curZoom = map.getCameraPosition().zoom;
             int blurRadius = (int) (curZoom*blurFactor);
