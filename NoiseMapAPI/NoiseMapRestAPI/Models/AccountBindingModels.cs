@@ -20,7 +20,7 @@ namespace NoiseMapRestAPI.Models
         public string OldPassword { get; set; }
 
         [Required]
-        [StringLength(100, ErrorMessage = "\"{0}\" muss mindestens {2} Zeichen lang sein.", MinimumLength = 6)]
+        [StringLength(100, ErrorMessage = "\"{0}\" muss mindestens {2} Zeichen lang sein.", MinimumLength = 4)]
         [DataType(DataType.Password)]
         [Display(Name = "Neues Kennwort")]
         public string NewPassword { get; set; }
@@ -70,7 +70,7 @@ namespace NoiseMapRestAPI.Models
     public class SetPasswordBindingModel
     {
         [Required]
-        [StringLength(100, ErrorMessage = "\"{0}\" muss mindestens {2} Zeichen lang sein.", MinimumLength = 6)]
+        [StringLength(100, ErrorMessage = "\"{0}\" muss mindestens {2} Zeichen lang sein.", MinimumLength = 4)]
         [DataType(DataType.Password)]
         [Display(Name = "Neues Kennwort")]
         public string NewPassword { get; set; }
