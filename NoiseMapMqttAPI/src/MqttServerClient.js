@@ -106,8 +106,8 @@ module.exports = class MqttServerClient {
         const username = this.mapClientIdToUsername[clientId];
         const insertSampleQuery = `DECLARE @maxId int;
         SELECT @maxId = MAX(ID) FROM NOISE_SAMPLE
-        INSERT INTO NOISE_SAMPLE(id, timestamp, noiseValue, latitude, longitude, accuracy, version, createdAt, updatedAt, speed, userName)
-        VALUES(@maxID + 1, '${json.timestamp}', ${json.noiseValue}, ${json.latitude}, ${json.longitude}, ${json.accuracy}, '${json.version}', '${json.createdAt}', '${json.updatedAt}', ${json.speed}, '${username}');`
+        INSERT INTO NOISE_SAMPLE(id, timestamp, noiseValue, latitude, longitude, accuracy, speed, userName)
+        VALUES(@maxID + 1, '${json.timestamp}', ${json.noiseValue}, ${json.latitude}, ${json.longitude}, ${json.accuracy}, ${json.speed}, '${username}');`
 
         await this.db.connect();
         const result = await this.db.executeQuery(insertSampleQuery);

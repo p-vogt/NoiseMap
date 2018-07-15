@@ -51,11 +51,6 @@ public class LocationTrackerBroadcastReceiver extends BroadcastReceiver {
                 jsonBody.put("latitude",location.getLatitude());
                 jsonBody.put("accuracy", location.getAccuracy());
                 jsonBody.put("speed", location.getSpeed());
-                jsonBody.put("version", "AAAAAAAAB9g="); // TODO ??
-                jsonBody.put("createdAt", timestamp);
-                jsonBody.put("updatedAt", timestamp);
-                jsonBody.put("deleted", false);
-
             } catch (JSONException e) {}
         }
         return jsonBody;
