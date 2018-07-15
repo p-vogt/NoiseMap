@@ -39,6 +39,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * A login screen that offers login via username/password.
@@ -134,7 +135,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         }
     }
     private void attemptRegister() {
-        // TODO
         // http://noisemaprestapi.azurewebsites.net/api/Account/Register
         //{
         //	"Username": "<xyz>",
@@ -184,7 +184,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             registerUserTask = new RegisterUserTask(email, password, confirmPassword);
             registerUserTask.execute((Void) null);
         }
-        // TODO call attemptLogin() on success ?
     }
     /**
      * Attempts to sign in the account specified by the login form.
@@ -246,14 +245,13 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     }
 
     private boolean isEmailValid(String email) {
-        //TODO
-        return true;
-        //return email.contains("@");
+        // http://emailregex.com/
+        Pattern isEmailValidPattern = Pattern.compile("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])");
+        return isEmailValidPattern.matcher(email).matches();
     }
 
     private boolean isPasswordValid(String password) {
-        //TODO
-        return password.length() > 4;
+        return password.length() >= 4;
     }
 
     /**
