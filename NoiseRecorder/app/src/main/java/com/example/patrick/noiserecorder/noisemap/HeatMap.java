@@ -367,11 +367,11 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             sampleArray = (JSONArray) json.get("samples");
             int arrayLen = sampleArray.length();
             for(int i = 0; i < arrayLen; i++) {
+                Sample newSample = new Sample();
                 if (sampleArray.get(i) instanceof JSONObject) {
                     boolean isJsonValid = true;
                     JSONObject curObject = (JSONObject) sampleArray.get(i);
                     if (curObject != null) {
-                        Sample newSample = new Sample();
                         double longitude = -1.0;
                         double latitude = -1.0;
                         if (!curObject.isNull(("longitude"))) {
