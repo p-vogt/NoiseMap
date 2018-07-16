@@ -1,15 +1,15 @@
 <preference-headers xmlns:android="http://schemas.android.com/apk/res/android">
 
     <header
-        android:fragment="com.example.patrick.noiserecorder.SettingsActivity$GeneralPreferenceFragment"
+        android:fragment="com.iot.noisemap.noiserecorder.SettingsActivity$GeneralPreferenceFragment"
         android:icon="@drawable/ic_home_black_24dp"
         android:title="@string/pref_header_general" />
     <header
-        android:fragment="com.example.patrick.noiserecorder.SettingsActivity$MeasurementPreferenceFragment"
+        android:fragment="com.iot.noisemap.noiserecorder.SettingsActivity$MeasurementPreferenceFragment"
         android:icon="@drawable/ic_mic_black_24dp"
         android:title="Measurement" />
     <header
-        android:fragment="com.example.patrick.noiserecorder.SettingsActivity$NoiseMapPreferenceFragment"
+        android:fragment="com.iot.noisemap.noiserecorder.SettingsActivity$NoiseMapPreferenceFragment"
         android:icon="@drawable/ic_map_black_24dp"
         android:title="@string/pref_header_notifications" />
 

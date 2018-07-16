@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.patrick.noiserecorder">
+    package="com.iot.noisemap.noiserecorder">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -17,7 +17,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".LoginActivity"
+            android:name="com.iot.noisemap.noiserecorder.LoginActivity"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,14 +25,14 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".MainActivity"
+            android:name="com.iot.noisemap.noiserecorder.MainActivity"
             android:configChanges="orientation"
             android:label="@string/title_activity_main"
             android:screenOrientation="portrait" />
         <service android:name="org.eclipse.paho.android.service.MqttService">
         </service>
         <service
-            android:name=".location.LocationTrackerService"
+            android:name="com.iot.noisemap.noiserecorder.location.LocationTrackerService"
             android:enabled="true"
             android:exported="true" />
         <!--
@@ -48,11 +48,11 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".MapsActivity"
+            android:name="com.iot.noisemap.noiserecorder.MapsActivity"
             android:label="@string/title_activity_maps"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".SettingsActivity"
+            android:name="com.iot.noisemap.noiserecorder.SettingsActivity"
             android:label="@string/title_activity_settings"></activity>
     </application>
 

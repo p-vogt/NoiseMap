@@ -7,7 +7,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
 
-import com.example.patrick.noiserecorder.MapsActivity;
+import com.iot.noisemap.noiserecorder.MapsActivity;
 
 import java.util.Arrays;
 import java.util.LinkedList;

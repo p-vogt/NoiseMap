@@ -1,0 +1,6 @@
+package com.iot.noisemap.noiserecorder;
+
+public class Config {
+    public static final String HOST_BASE_URL = "https://noisemaprestapi.azurewebsites.net/";
+    public static final String API_BASE_URL = HOST_BASE_URL + "api/";
+}
