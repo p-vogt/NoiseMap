@@ -90,7 +90,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
 
     private MapsActivity activity;
     private RequestQueue requestQueue;
-    private String weekdayFilter = "No Filter";
+    private String weekdayFilter = "";
     private TileOverlay heatmapOverlay;
     private HeatmapTileProvider provider;
     private MqttNoiseMapClient mqttClient;
@@ -337,7 +337,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
 
                 // check week day filter
                 String weekDayOfSample = new SimpleDateFormat("EE", Locale.ENGLISH).format(sample.timestamp.getTime());
-                if(weekdayFilter.equals("No Filter") || weekDayOfSample.equals(weekdayFilter)) {
+                if(weekdayFilter.contains((weekDayOfSample))) {
 
                     // calculate matrix indices
                     // Index = floor[(Value-FirstPositionValue)/
@@ -657,6 +657,9 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
 
     public void setWeekdayFilter(String weekday) {
         weekdayFilter = weekday;
+    }
+    public String getWeekdayFilter() {
+        return weekdayFilter;
     }
 
     public void setAlpha(double alpha) {

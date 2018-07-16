@@ -22,6 +22,7 @@ import java.util.Calendar;
 
 import com.example.patrick.noiserecorder.noisemap.HeatMap;
 import com.example.patrick.noiserecorder.noisemap.HeatMap.TimePoint;
+import com.extra.MultiSelectionSpinner;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -69,7 +70,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     };
     private GoogleMap map;
     private HeatMap heatmap;
-
+    private MultiSelectionSpinner spinnerWeekdayFilter;
     private HeatMap.OverlayType overlayType = HeatMap.OverlayType.OVERLAY_TILES;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,10 +113,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        Spinner spinnerWeekdayFilter = (Spinner) findViewById(R.id.weekdayFilterSpinner);
-        spinnerWeekdayFilter.setBackgroundResource(android.R.drawable.btn_dropdown);
         final List<String> filterList = new ArrayList<>();
-        filterList.add("No Filter");
         filterList.add("Mon");
         filterList.add("Tue");
         filterList.add("Wed");
@@ -123,29 +121,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         filterList.add("Fri");
         filterList.add("Sat");
         filterList.add("Sun");
-
-        ArrayAdapter<String> filterDataAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, filterList);
-        filterDataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerWeekdayFilter.setAdapter(filterDataAdapter);
-        spinnerWeekdayFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            boolean isFirstSelect = true;
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if(heatmap != null) {
-                    heatmap.setWeekdayFilter(filterList.get(position));
-                    if(!isFirstSelect) {
-                        heatmap.refresh(true);
-                    }
-                }
-                isFirstSelect = false;
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
+        spinnerWeekdayFilter=(MultiSelectionSpinner)findViewById(R.id.weekdayFilterSpinner);
+        spinnerWeekdayFilter.setCaller(this);
+        spinnerWeekdayFilter.setItems(filterList);
+        int[] array = new int[filterList.size()];
+        for (int i = 0; i < filterList.size(); ++i) {
+            array[i] = i;
+        }
+        spinnerWeekdayFilter.setSelection(array);
 
         final Button btnStartTime = (Button) findViewById(R.id.btn_startTime);
         btnStartTime.setOnClickListener(new View.OnClickListener() {
@@ -218,6 +201,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setMapType(mapTypeId);
 
     }
+    private boolean isFirstSelect = true;
+    public void onFilterChanged() {
+        updateWeekdayFilter();
+    }
     @Override
     public void onResume() {
         super.onResume();
@@ -262,6 +249,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
      */
+    private void updateWeekdayFilter() {
+        String newWeekdayFilter = spinnerWeekdayFilter.getSelectedItemsAsString();
+
+        if(heatmap != null) {
+            String curWeekdayFilter = heatmap.getWeekdayFilter();
+            if(!curWeekdayFilter.equals(newWeekdayFilter) || isFirstSelect) {
+                heatmap.setWeekdayFilter(newWeekdayFilter);
+                heatmap.refresh(true);
+            }
+        }
+        isFirstSelect = false;
+    }
     @Override
     public void onMapReady(GoogleMap googleMap) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
@@ -279,7 +278,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Toast.makeText(this,"Invalid tile transparency setting!",Toast.LENGTH_LONG).show();
         }
         heatmap = new HeatMap(map, 1.0 - transparency, accessToken, username, password, useMqtt, this);
-        heatmap.setWeekdayFilter("No Filter");
+        updateWeekdayFilter();
         heatmap.requestSamplesForVisibleArea();
     }
 }

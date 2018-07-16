@@ -47,7 +47,24 @@
                     android:padding="10dp"
                     android:paddingRight="10dp"
                     android:text="Refresh" />
-
+                <Button
+                    android:id="@+id/btn_startTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right|top"
+                    android:layout_marginTop="10dp"
+                    android:padding="10dp"
+                    android:paddingRight="10dp"
+                    android:text="Start" />
+                <Button
+                    android:id="@+id/btn_endTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right|top"
+                    android:layout_marginTop="10dp"
+                    android:padding="10dp"
+                    android:paddingRight="10dp"
+                    android:text="End" />
             </LinearLayout>
 
             <LinearLayout
@@ -56,51 +73,14 @@
                 android:orientation="horizontal"
                 android:paddingLeft="8dp">
 
-                <Spinner
+                <com.extra.MultiSelectionSpinner
                     android:id="@+id/weekdayFilterSpinner"
-                    android:layout_width="match_parent"
+                    android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_gravity="center"
-                    android:layout_marginLeft="5dp"
-                    android:layout_marginTop="1dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:spinnerMode="dropdown" />
-                <TextView
-                    android:id="@+id/tv_time"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="5dp"
-                    android:textSize="16sp"
-                    android:layout_gravity="center_horizontal"
-                    android:textStyle="bold"/>
+                    android:layout_margin="2dp"
+                    android:background="?android:attr/colorMultiSelectHighlight" />
 
-                <Button
-                    android:id="@+id/btn_startTime"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="5dp"
-                    android:layout_marginTop="5dp"
-                    android:background="@color/timePickerBtn"
-                    android:text="Start" />
-                <TextView
-                    android:id="@+id/tv_endTime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="5dp"
-                    android:textSize="16sp"
-                    android:layout_gravity="center_horizontal"
-                    android:textStyle="bold"/>
 
-                <Button
-                    android:id="@+id/btn_endTime"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="5dp"
-                    android:layout_marginTop="5dp"
-                    android:background="@color/timePickerBtn"
-                    android:text="End" />
             </LinearLayout>
         </LinearLayout>
 
