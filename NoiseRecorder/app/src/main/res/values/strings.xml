@@ -49,7 +49,7 @@
 
     <!-- Settings -->
     <string-array name="pref_noisemap_map_styles">
-        <item>Normal</item>
+        <item>Road Map</item>
         <item>Satellite</item>
         <item>Terrain</item>
         <item>Hybrid</item>

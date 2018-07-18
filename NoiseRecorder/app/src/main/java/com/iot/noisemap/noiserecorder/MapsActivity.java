@@ -177,7 +177,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String mapStyle = sharedPref.getString("map_style", "");
         int mapTypeId = 1;
         switch (mapStyle) {
-            case "Normal":
+            case "Road Map":
                 mapTypeId = 1;
                 break;
             case "Satellite":
