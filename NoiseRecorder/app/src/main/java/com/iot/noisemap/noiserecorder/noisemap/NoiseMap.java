@@ -306,31 +306,31 @@ public class NoiseMap implements OnRequestResponseCallback, INoiseMapMqttConsume
      */
     @Override
     public void onConnected() {
-        Toast.makeText(activity,
+        /*Toast.makeText(activity,
                 "MQTT connected",
                 Toast.LENGTH_LONG)
-                .show();
+                .show();*/
     }
     /**
      * Gets called when the MQTT connection failed.
      */
     @Override
     public void onConnectionFailed() {
-        Toast.makeText(activity,
+        /*Toast.makeText(activity,
                 "MQTT connection failed",
                 Toast.LENGTH_LONG)
                 .show();
-        activity.activateRefreshButton();
+        activity.activateRefreshButton();*/
     }
     /**
      * Gets called when the MQTT connection is lost.
      */
     @Override
     public void onConnectionLost() {
-        Toast.makeText(activity,
+       /* Toast.makeText(activity,
                 "MQTT disconnected",
                 Toast.LENGTH_LONG)
-                .show();
+                .show();*/
         activity.activateRefreshButton();
     }
 

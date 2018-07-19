@@ -272,29 +272,29 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
      */
     @Override
     public void onConnected() {
-        Toast.makeText(this,
+        /*Toast.makeText(this,
                 "MQTT connected",
                 Toast.LENGTH_LONG)
-                .show();
+                .show();*/
     }
     /**
      * Gets called when the MQTT connection failed.
      */
     @Override
     public void onConnectionFailed() {
-        Toast.makeText(this,
+        /*Toast.makeText(this,
                 "MQTT connection failed",
                 Toast.LENGTH_LONG)
-                .show();
+                .show();*/
     }
     /**
      * Gets called when the MQTT is lost.
      */
     @Override
     public void onConnectionLost() {
-        Toast.makeText(this,
+        /*Toast.makeText(this,
                 "MQTT disconnected",
                 Toast.LENGTH_LONG)
-                .show();
+                .show();*/
     }
 }
