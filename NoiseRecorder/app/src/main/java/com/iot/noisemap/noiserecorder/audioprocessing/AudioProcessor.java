@@ -1,8 +1,11 @@
 package com.iot.noisemap.noiserecorder.audioprocessing;
 import org.jtransforms.fft.DoubleFFT_1D;
 
-
+/**
+ *  Performs the audio processing.
+ */
 public class AudioProcessor {
+
     private static final double REFERENCE_LOG = Math.log10(0.00002);
     private final DoubleFFT_1D fft = new DoubleFFT_1D(RecordingConfig.BLOCK_SIZE_FFT);
     private double window_function[] = new double[RecordingConfig.BLOCK_SIZE_FFT];
@@ -10,15 +13,27 @@ public class AudioProcessor {
     private int numberOfFFTs = 0;
     private double averageDB = 0;
     private double calibrationOffset_db;
+
+    /**
+     * Creates a new audio processor.
+     * @param calibrationOffset_db calibration offset for the calculated noise.
+     */
     public AudioProcessor(double calibrationOffset_db) {
         initCalculations();
         this.calibrationOffset_db = calibrationOffset_db;
     }
 
+    /**
+     * Initializes the window function and the A-weighting factors.
+     */
     private void initCalculations() {
         calculateHannWindow();
         calculateAWeighting();
     }
+
+    /**
+     * Initializes the hann window.
+     */
     private void calculateHannWindow() {
         for(int i = 0; i < RecordingConfig.BLOCK_SIZE_FFT; i++) {
             double hanningTemp = (2*Math.PI * i) / (RecordingConfig.BLOCK_SIZE_FFT - 1);
@@ -26,6 +41,10 @@ public class AudioProcessor {
         }
     }
 
+
+    /**
+     * Calculates the A-weighting.
+     */
     private void calculateAWeighting() {
         for (int i = 0; i< RecordingConfig.BLOCK_SIZE_FFT /2; i++) {
             double f = i * RecordingConfig.FREQUENCY_RESOLUTION;
@@ -35,16 +54,29 @@ public class AudioProcessor {
             a_weighting[i] = (12200 * 12200 * f4) / ((f2 + 20.6 * 20.6) * (f2 + 12200 * 12200) * Math.sqrt(f2 + 107.7 * 107.7) * Math.sqrt(f2 + 737.9 * 737.9));
         }
     }
+
+    /**
+     * Gets called when the measurement is done.
+     * @return average noise.
+     */
     public double finishProcess() {
         double average = averageDB / numberOfFFTs;
         reset();
         return average;
     }
+
+    /**
+     * Resets parameters: Number of performed FFTs and average dBA.
+     */
     private void reset() {
         numberOfFFTs = 0;
         averageDB = 0;
     }
 
+    /**
+     * Processes an incoming value buffer of noise samples.
+     * @param valueBuffer incoming value buffer.
+     */
     public void process(short[] valueBuffer) {
 
         double vals[] = new double[RecordingConfig.BLOCK_SIZE_FFT];
@@ -89,6 +121,10 @@ public class AudioProcessor {
         }
     }
 
+    /**
+     * Sets the calibration offset.
+     * @param calibrationOffset Desired calibration offset.
+     */
     public void setCalibrationOffset(double calibrationOffset) {
         this.calibrationOffset_db = calibrationOffset;
     }

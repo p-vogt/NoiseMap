@@ -4,6 +4,9 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 
+/**
+ * Config. of the audio recording.
+ */
 public final class RecordingConfig {
     public static final int SAMPLE_RATE_IN_HZ = 44100;
     public static final int FFTS_PER_SECOND = 20;

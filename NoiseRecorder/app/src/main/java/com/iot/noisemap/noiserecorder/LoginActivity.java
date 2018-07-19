@@ -18,6 +18,7 @@ import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -37,6 +38,7 @@ import com.android.volley.toolbox.Volley;
 import com.iot.noisemap.noiserecorder.network.rest.RestCallFactory;
 import org.json.JSONObject;
 
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -61,6 +63,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private RequestQueue requestQueue;
 
 
+    /**
+     * Creates the activity.
+     * @param savedInstanceState saved state.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -115,12 +121,21 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         progressView = findViewById(R.id.login_progress);
     }
 
+    /**
+     * Loads the user data.
+     */
     private void loadUserData() {
         SharedPreferences settings = getSharedPreferences("UserData", 0);
         usernameView.setText(settings.getString("Username", "").toString());
         passwordView.setText(settings.getString("Password", "").toString());
     }
 
+    /**
+     * Gets called when a permission request failed.
+     * @param requestCode Which request?
+     * @param permissions What permission?
+     * @param grantResults Grant result
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 
@@ -135,6 +150,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 break;
         }
     }
+
+    /**
+     * Attempts to register the user at the server.
+     */
     private void attemptRegister() {
         // http://noisemaprestapi.azurewebsites.net/api/Account/Register
         //{
@@ -245,12 +264,22 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         }
     }
 
+    /**
+     * Checks if the email is valid.
+     * @param email Email to check.
+     * @return Email valid?
+     */
     private boolean isEmailValid(String email) {
         // http://emailregex.com/
         Pattern isEmailValidPattern = Pattern.compile("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])");
         return isEmailValidPattern.matcher(email).matches();
     }
 
+    /**
+     * Checks if the password is valid.
+     * @param password Email to check.
+     * @return Password valid?
+     */
     private boolean isPasswordValid(String password) {
         return password.length() >= 4;
     }
@@ -325,6 +354,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
     }
 
+    /**
+     * Adds the auto complete for the email.
+     * @param emailAddressCollection List of email addresses.
+     */
     private void addEmailsToAutoComplete(List<String> emailAddressCollection) {
         //Create adapter to tell the AutoCompleteTextView what to show in its dropdown list.
         ArrayAdapter<String> adapter =
@@ -333,7 +366,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         usernameView.setAdapter(adapter);
     }
-
 
     private interface ProfileQuery {
         String[] PROJECTION = {
@@ -426,8 +458,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             Request<JSONObject> registerUserRequest = null;
             try {
                 registerUserRequest = RestCallFactory.createRegisterUserRequest(username, password, confirmPassword, TOKEN_URL, LoginActivity.this);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace(); // username, password or confirmationPassword == null
+            } catch (InvalidParameterException e) {
+                Log.e("RegisterUserTask","invalid parameters"); // username, password or confirmationPassword == null
             }
             // increase accepted timeout duration, because the azure web api seems to go into a
             // standby-ish mode when it gets no request for some time

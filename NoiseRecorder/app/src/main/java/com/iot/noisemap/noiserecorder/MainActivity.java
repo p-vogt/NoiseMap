@@ -43,6 +43,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
+/**
+ * Main view of the app.
+ */
 public class MainActivity extends AppCompatActivity implements INoiseMapMqttConsumer {
     private static final String TAG = "MainActivity";
     final ArrayList<String> listItems = new ArrayList<>();
@@ -140,7 +143,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
         boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
 
         if(useMqtt) {
-            mqttClient.postSample(sampleBody.toString());
+            mqttClient.publishSample(sampleBody.toString());
         } else {
             JsonObjectRequest postSample = RestCallFactory.createPostSampleRequest(sampleBody, POST_SAMPLE_URL, this.accessToken);
             requestQueue.add(postSample);
@@ -237,6 +240,10 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
             mqttClient.connect();
         }
     }
+
+    /**
+     * Initializes the services.
+     */
     private void initServices() {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         String calibrationOffsetInDbStr = sharedPref.getString("noisemap_measurement_calibrationOffset", "-1.75f");
@@ -250,11 +257,19 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                 messageReceiver, new IntentFilter("new-location"));
     }
 
+    /**
+     * Gets called when a new MQTT message arrives.
+     * @param topic   Message topic.
+     * @param message Incoming message.
+     */
     @Override
     public void onMessageArrived(String topic, MqttMessage message) {
 
     }
 
+    /**
+     * Gets called when the MQTT connection gets connected.
+     */
     @Override
     public void onConnected() {
         Toast.makeText(this,
@@ -262,7 +277,9 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                 Toast.LENGTH_LONG)
                 .show();
     }
-
+    /**
+     * Gets called when the MQTT connection failed.
+     */
     @Override
     public void onConnectionFailed() {
         Toast.makeText(this,
@@ -270,7 +287,9 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                 Toast.LENGTH_LONG)
                 .show();
     }
-
+    /**
+     * Gets called when the MQTT is lost.
+     */
     @Override
     public void onConnectionLost() {
         Toast.makeText(this,

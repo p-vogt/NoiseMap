@@ -10,6 +10,7 @@ import android.widget.Toast;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.iot.noisemap.noiserecorder.network.protobuf.NoiseMap.NoiseMap.Samples;
 import com.iot.noisemap.noiserecorder.Config;
 import com.iot.noisemap.noiserecorder.MapsActivity;
 import com.iot.noisemap.noiserecorder.network.mqtt.INoiseMapMqttConsumer;
@@ -43,32 +44,41 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
-import com.iot.noisemap.noiserecorder.network.protobuf.NoiseMap.NoiseMap;
 
+/**
+ * Manages the noise map (creation).
+ */
+public class NoiseMap implements OnRequestResponseCallback, INoiseMapMqttConsumer {
 
-public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer {
-
+    /**
+     * Represents the overlay types of the noise map.
+     */
     public enum OverlayType {
         OVERLAY_TILES,
         OVERLAY_HEATMAP
     }
+
+    /**
+     * Represents a point in time (hour and minute).
+     */
     public static class TimePoint {
         public int hour;
         public int minute;
+
+        /**
+         * Creates a TimePoint.
+         * @param hour hour.
+         * @param minute minute.
+         */
         public TimePoint(int hour, int minute) {
             this.hour = hour;
             this.minute = minute;
         }
 
-        public boolean isGreaterThan(TimePoint time) {
-            return this.hour > time.hour
-                    || this.hour == time.hour && this.minute > time.minute;
-        }
-
-        public boolean equals(TimePoint time) {
-            return this.minute == time.minute && this.hour == time.hour;
-        }
-
+        /**
+         * Returns the string representation.
+         * @return String representation.
+         */
         @Override
         public String toString() {
             String text = this.hour >= 10 ? "" + this.hour : "0" + this.hour;
@@ -78,6 +88,9 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
     }
 
+    /**
+     * Directions (degree).
+     */
     private class Direction {
         public final static int NORTHEAST = 45;
         public final static int SOUTHEAST = NORTHEAST + 90;
@@ -111,7 +124,17 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     private List<WeightedLatLng> cachedWeightedSamples = new ArrayList<>();
     private List<Double> cachedMeanNoise = new ArrayList<>();
 
-    public HeatMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final boolean useMqtt, final MapsActivity activity) {
+    /**
+     * Creates a new noise map.
+     * @param map Corresponding google map.
+     * @param initAlpha Alpha of the tiles.
+     * @param accessToken Access token of the user.
+     * @param username Username.
+     * @param password Password.
+     * @param useMqtt Should MQTT be used? False = HTTP.
+     * @param activity Calling activity.
+     */
+    public NoiseMap(final GoogleMap map, double initAlpha, String accessToken, String username, String password, final boolean useMqtt, final MapsActivity activity) {
         this.map = map;
         map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
             @Override
@@ -119,7 +142,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                 double curZoom = map.getCameraPosition().zoom;
                 if(curZoom != prevZoom) {
                     prevZoom = curZoom;
-                    calculateBlur(map);
+                    calculateBlur();
                 }
             }
         });
@@ -149,10 +172,18 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         });
     }
 
+    /**
+     * Sets the overlay type.
+     * @param overlayType New overlay type.
+     */
     public void setOverlayType(OverlayType overlayType) {
         this.overlayType = overlayType;
     }
 
+    /**
+     * Gets called when a new response is received.
+     * @param response The received JSON object.
+     */
     @Override
     public void onRequestResponseCallback(JSONObject response) {
        boolean success = parseSamples(response);
@@ -163,6 +194,10 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
         activity.activateRefreshButton();
     }
+
+    /**
+     * Requests samples for the visible area.
+     */
     public void requestSamplesForVisibleArea() {
         LatLng northEastVisible = map.getProjection().getVisibleRegion().latLngBounds.northeast;
         LatLng southWestVisible = map.getProjection().getVisibleRegion().latLngBounds.southwest;
@@ -180,6 +215,15 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
 
     }
 
+    /**
+     * Requests samples via HTTP.
+     * @param latitudeStart Latitude start.
+     * @param latitudeEnd Latitude end.
+     * @param longitudeStart Longitutde start.
+     * @param longitudeEnd longitude end.
+     * @param start Start time.
+     * @param end End time.
+     */
     private void requestSamplesViaHttp(double latitudeStart, double latitudeEnd, double longitudeStart, double longitudeEnd, TimePoint start, TimePoint end) {
         String apiUrl = Config.API_BASE_URL + "Sample";
         apiUrl += "?latitudeStart=" + latitudeStart;
@@ -190,11 +234,17 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         requestQueue.add(apiRequest);
     }
 
-    private JSONObject protobufSamplesToJSONObject(NoiseMap.Samples samples) throws JSONException {
+    /**
+     * Converts the protobuf samples to JSON Objects.
+     * @param samples Incoming samples.
+     * @return JSON representation.
+     * @throws JSONException Invalid JSON received.
+     */
+    private JSONObject protobufSamplesToJSONObject(Samples samples) throws JSONException {
 
         JSONObject json = new JSONObject();
         json.put("samples",new JSONArray());
-        for(NoiseMap.Samples.Sample sample : samples.getSamplesList()) {
+        for(com.iot.noisemap.noiserecorder.network.protobuf.NoiseMap.NoiseMap.Samples.Sample sample : samples.getSamplesList()) {
             JSONObject jsonSample = new JSONObject();
             try {
                 jsonSample.put("latitude", sample.getLatitude());
@@ -208,6 +258,12 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
         return json;
     }
+
+    /**
+     * Gets called when a new MQTT message arrives.
+     * @param topic   Message topic.
+     * @param message Incoming message.
+     */
     @Override
     public void onMessageArrived(String topic, MqttMessage message) {
         byte[] payload = message.getPayload();
@@ -217,7 +273,7 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         JSONObject json = null;
         try {
             if(useProto) {
-                    NoiseMap.Samples samples = NoiseMap.Samples.parseFrom(payload);
+                    com.iot.noisemap.noiserecorder.network.protobuf.NoiseMap.NoiseMap.Samples samples = com.iot.noisemap.noiserecorder.network.protobuf.NoiseMap.NoiseMap.Samples.parseFrom(payload);
                     json = protobufSamplesToJSONObject(samples);
             } else {
                     String samples = new String(payload, "UTF-8");
@@ -226,11 +282,11 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             parseSamples(json);
             refresh(true);
         } catch (JSONException | InvalidProtocolBufferException | UnsupportedEncodingException  e ) {
-            Log.e("HeatMap", e.getMessage());
+            Log.e("NoiseMap", e.getMessage());
             Toast.makeText(activity,"Invalid response!",Toast.LENGTH_LONG).show();
         }
         activity.activateRefreshButton();
-        Log.d("HeatMap", "messageArrived");
+        Log.d("NoiseMap", "messageArrived");
     }
     public void setStartTime(TimePoint startTime) {
         this.startTime = startTime;
@@ -244,6 +300,10 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     public TimePoint getEndTime() {
         return endTime;
     }
+
+    /**
+     * Gets called when the MQTT connection is opened.
+     */
     @Override
     public void onConnected() {
         Toast.makeText(activity,
@@ -251,7 +311,9 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                 Toast.LENGTH_LONG)
                 .show();
     }
-
+    /**
+     * Gets called when the MQTT connection failed.
+     */
     @Override
     public void onConnectionFailed() {
         Toast.makeText(activity,
@@ -260,7 +322,9 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                 .show();
         activity.activateRefreshButton();
     }
-
+    /**
+     * Gets called when the MQTT connection is lost.
+     */
     @Override
     public void onConnectionLost() {
         Toast.makeText(activity,
@@ -271,6 +335,10 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
 
 
+    /**
+     * Sets wheter MQTT should be used or not.
+     * @param val the new value.
+     */
     public void setUseMqtt(boolean val) {
         this.useMqtt = val;
         if(useMqtt) {
@@ -279,7 +347,11 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
             this.mqttClient.disconnect();
         }
     }
-    private void calculateBlur(GoogleMap map) {
+
+    /**
+     * Calculates the blur based on the view.
+     */
+    private void calculateBlur() {
         if(provider != null) {
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
             String blurFactorStr = sharedPref.getString("noisemap_heatmap_blur", "3.0");
@@ -302,19 +374,40 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
     }
 
 
+    /**
+     * Sets the last clicked polygon.
+     * @param poly The polygon.
+     */
     private void setLastClickedPolygon(Polygon poly) {
         lastClickedPolygon = poly;
     };
 
+    /**
+     * Applies an alpha value to a color.
+     * @param alpha Alpha.
+     * @param color The color.
+     * @return The ARGB value.
+     */
     private static int applyAlphaToColor(double alpha, final int color) {
         int alphaColor = color & 0x00ffffff;
         alphaColor = (int)(alpha * 255) << 24 | alphaColor;
         return alphaColor;
     }
 
+    /**
+     * Returns the last clicked polygon.
+     * @return Last clicked polygon.
+     */
     private Polygon getLastClickedPolygon() {
         return lastClickedPolygon;
     }
+
+    /**
+     * Returns the mean noise.
+     * @param heightCounter Number of rows (height).
+     * @param widthCounter Number of rows (width).
+     * @return The mean noise.
+     */
     public double getMeanNoise(int heightCounter, int widthCounter) {
         double sum = 0.0d;
         List<Double> samplesInArea = noiseMatrix.get(heightCounter).get(widthCounter);
@@ -329,6 +422,12 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         return sum/samplesInArea.size();
     }
 
+    /**
+     * Clusters the samples (applies the weekday filter).
+     * @param northWestVisible Top left pos. of the visible map.
+     * @param offsetLong Offset of the longitute.
+     * @param offsetLat Offset of the latitude.
+     */
     private void clusterSamples(LatLng northWestVisible, double offsetLong, double offsetLat) {
         for(Sample sample: samples) {
             // check if value is in visible area
@@ -350,6 +449,15 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
     }
 
+    /**
+     * Requests samples via MQTT.
+     * @param longitudeStart Start longitude.
+     * @param longitudeEnd End longitude.
+     * @param latitudeStart Start latitude.
+     * @param latitudeEnd End latitude.
+     * @param start Start time.
+     * @param end End time.
+     */
     private void requestSamplesViaMqtt(final double latitudeStart, final double latitudeEnd, final double longitudeStart, final double longitudeEnd, TimePoint start, final TimePoint end) {
         MqttMessage msg = new MqttMessage();
         RequestSamplesOptions options = new RequestSamplesOptions(longitudeStart,longitudeEnd,latitudeStart,latitudeEnd, start, end);
@@ -363,6 +471,12 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
 
     }
+
+    /**
+     * Parses the json body to samples.
+     * @param json Incoming json body.
+     * @return Success?
+     */
     public boolean parseSamples(final JSONObject json) {
         samples.clear();
         JSONArray sampleArray;
@@ -418,11 +532,17 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
         return true;
     }
-    private void initMatrix(final double NUM_OF_RECTS_WIDTH, final double numOfRectsHeight) {
+
+    /**
+     * Initializes the noise matrix.
+     * @param numberOfRectsWidth Number of rectangles (width).
+     * @param numOfRectsHeight Number of rectangles (height).
+     */
+    private void initMatrix(final double numberOfRectsWidth, final double numOfRectsHeight) {
         noiseMatrix.clear();
         for(int i = 0; i < numOfRectsHeight; i++) {
             List<List<Double>> row = new ArrayList<>();
-            for(int j = 0; j < NUM_OF_RECTS_WIDTH;j++) {
+            for(int j = 0; j < numberOfRectsWidth;j++) {
                 List<Double> column = new ArrayList<>();
                 row.add(column);
             }
@@ -430,6 +550,10 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
     }
 
+    /**
+     * Adds the border animation to a polygon.
+     * @param polygon Desired polygon.
+     */
     private void addPolygonBorderAnimation(final Polygon polygon) {
         final long start = SystemClock.uptimeMillis();
         final long animationDurationInMs = 1000;
@@ -457,6 +581,10 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         });
     }
 
+    /**
+     * Refreshes the view.
+     * @param fullRefresh Full refresh (request new values)?
+     */
     public void refresh(boolean fullRefresh) {
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(activity);
@@ -475,6 +603,10 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
     }
 
+    /**
+     * Refreshes the view.
+     * @param fullRefresh Full refresh (request new values)?
+     */
     private void performFullMapRefresh(boolean fullRefresh) {
 
         // load preferences
@@ -535,6 +667,11 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         }
     }
 
+    /**
+     * Initializes the map cache.
+     * @param numberOfTilesWidth Number of tiles (width).
+     * @param numOfRectsHeight Number of tiles (height).
+     */
     private void initMapCache(int numberOfTilesWidth, double numOfRectsHeight) {
         polygons.clear();
         cachedPolygonOptions.clear();
@@ -543,19 +680,26 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         initMatrix(numberOfTilesWidth, numOfRectsHeight);
     }
 
+    /**
+     * Updates the tile overlay.
+     * @param isGridVisible Should the grid be drawn?
+     */
     private void updateTileOverlay(boolean isGridVisible) {
         int counter = 0;
         polygons.clear();
         for(PolygonOptions option : cachedPolygonOptions) {
             double meanNoise = cachedMeanNoise.get(counter);
             if(isGridVisible || meanNoise > 0.0d) {
-                Polygon poly = addPolygonToMap(meanNoise, option);
+                Polygon poly = addPolygonToMap(option);
                 polygons.add(poly);
             }
             counter++;
         }
     }
 
+    /**
+     * Updates the heat map overlay.
+     */
     private void updateHeatmapOverlay() {
         if(cachedWeightedSamples != null && cachedWeightedSamples.size() > 0) {
             Collection weightedSamples = new ArrayList();
@@ -571,10 +715,14 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
                         .build();
                 heatmapOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
             }
-            calculateBlur(map);
+            calculateBlur();
         }
     }
 
+    /**
+     * Is the noise matrix empty?
+     * @return Is the noise matrix empty?
+     */
     private boolean isNoiseMatrixEmpty() {
         int sizeOfNoiseMatrix = noiseMatrix.size();
 
@@ -588,6 +736,13 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         return true;
     }
 
+    /**
+     * Calculates the normalized value of the noise.
+     * @param meanNoise The noise value.
+     * @param max Normalization max value.
+     * @param min Normalization min value.
+     * @return Normalized value of the noise
+     */
     private double getNormalizedNoise(double meanNoise, double max, double min) {
         if(Double.compare(meanNoise, -1.0) == 0) {
             return 0.0;
@@ -601,6 +756,12 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         return normalizedNoise;
     }
 
+    /**
+     * Calculates the ARGB value of the normalized value.
+     * @param normalizedValue The value.
+     * @param alpha Desired alpha.
+     * @return The ARGB value of the normalized value.
+     */
     private static int getArgbColor(double normalizedValue, double alpha) {
         int fillColor;
         int red = (int)(510 * normalizedValue);
@@ -622,6 +783,15 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         return fillColor;
     }
 
+    /**
+     * Creates the polygon options.
+     * @param radius Tile radius.
+     * @param center Center of the polygon.
+     * @param meanNoise Noise value.
+     * @param normalizedNoise Normalized value.
+     * @param alpha Alpha of the tile.
+     * @return The polygon options
+     */
     private PolygonOptions createPolygonOptions(double radius, LatLng center, double meanNoise, double normalizedNoise, double alpha) {
 
         // The diagonal length of the tile from the center to an edge (diag) is sqrt(2)*radius
@@ -647,27 +817,41 @@ public class HeatMap implements OnRequestResponseCallback, INoiseMapMqttConsumer
         return polygonOptions;
     }
 
-    private Polygon addPolygonToMap(double meanNoise, PolygonOptions polygonOptions) {
-        Polygon poly = map.addPolygon(polygonOptions);
-        if(meanNoise > 0d) {
-           poly.setTag(String.format("%.2f",  meanNoise) + " db(A)");
-       }
-        return poly;
+    /**
+     * Adds a polygon to the map.
+     * @param polygonOptions
+     * @return
+     */
+    private Polygon addPolygonToMap(PolygonOptions polygonOptions) {
+        return map.addPolygon(polygonOptions);
     }
 
-    public void setWeekdayFilter(String weekday) {
-        weekdayFilter = weekday;
+    /**
+     * Sets the weekday filter.
+     * @param weekdays Desired filter.
+     */
+    public void setWeekdayFilter(String weekdays) {
+        weekdayFilter = weekdays;
     }
+
+    /**
+     * Returns the weekday filter String.
+     * @return The weekday filter String.
+     */
     public String getWeekdayFilter() {
         return weekdayFilter;
     }
 
+    /**
+     * Sets the tile alpha.
+     * @param alpha Desired tile alpha.
+     */
     public void setAlpha(double alpha) {
         // update polygons
         for(Polygon poly : polygons) {
             int curColor = poly.getFillColor();
             if(curColor != 0) {
-                curColor = HeatMap.applyAlphaToColor(alpha, curColor);
+                curColor = NoiseMap.applyAlphaToColor(alpha, curColor);
                 poly.setFillColor(curColor);
             }
         }

@@ -27,6 +27,9 @@ import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.util.List;
 
+/**
+ * Service that periodically updates the location and provides it for other objects.
+ */
 public class LocationTrackerService extends Service implements ServiceConnection {
 
 
@@ -47,6 +50,10 @@ public class LocationTrackerService extends Service implements ServiceConnection
 
         }
     };
+
+    /**
+     * Creates a new LocationTrackerService.
+     */
     public LocationTrackerService() {
 
         createLocationRequest();
@@ -84,6 +91,9 @@ public class LocationTrackerService extends Service implements ServiceConnection
         }
     }
 
+    /**
+     * Emits the current location  (if not null) to the local broadcast manager.
+     */
     private void emitLocation() {
         if (currentLocation != null) {
 
@@ -103,12 +113,24 @@ public class LocationTrackerService extends Service implements ServiceConnection
 
     private final IBinder binder = new LocationTrackerBinder();
 
+    /**
+     * Returns Service.START_REDELIVER_INTENT.
+     * @param intent Corresponding intent.
+     * @param flags Service flags.
+     * @param startId Init ID.
+     * @return Service.START_REDELIVER_INTENT
+     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         return Service.START_REDELIVER_INTENT;
     }
 
+    /**
+     * Gets called when the service binding is done.
+     * @param intent Corresponding intent.
+     * @return The binding.
+     */
     // Gets checked before
     @SuppressLint("MissingPermission")
     @Override
@@ -130,12 +152,25 @@ public class LocationTrackerService extends Service implements ServiceConnection
         return messenger.getBinder();
     }
 
+    /**
+     * Gets called when the service connects.
+     * @param className Corresponding class name.
+     * @param service Corresponding service.
+     */
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) { }
 
+    /**
+     * Gets called when the service disconnects.
+     * @param className Corresponding class name.
+     */
     @Override
     public void onServiceDisconnected(ComponentName className) { }
 
+    /**
+     * Gets called when the binding dies.
+     * @param name Corresponding component name.
+     */
     @Override
     public void onBindingDied(ComponentName name) { }
 
@@ -155,6 +190,9 @@ public class LocationTrackerService extends Service implements ServiceConnection
     private static final long FASTEST_INTERVAL = 1000 * 3;
     private LocationRequest locationRequest;
 
+    /**
+     * Creates the location request.
+     */
     protected void createLocationRequest() {
         locationRequest = new LocationRequest();
         locationRequest.setInterval(INTERVAL);

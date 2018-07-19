@@ -15,6 +15,9 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * MQTT client for the MQTT noise map broker.
+ */
 public class MqttNoiseMapClient {
 
     private final MqttAndroidClient mqttAndroidClient;
@@ -25,6 +28,15 @@ public class MqttNoiseMapClient {
     private String password;
     MqttConnectOptions mqttConnectOptions;
     private List<StoredMqttMessage> msgBuffer = new ArrayList<>();
+
+    /**
+     * Creates a new MQTT client.
+     * @param clientId Id of the client.
+     * @param username Name of the user.
+     * @param password Password of the user.
+     * @param caller Calling consumer.
+     * @param applicationContext Application context.
+     */
     public MqttNoiseMapClient(String clientId, String username, String password, INoiseMapMqttConsumer caller, Context applicationContext) {
         this.caller = caller;
         this.clientId = clientId;
@@ -35,6 +47,10 @@ public class MqttNoiseMapClient {
         initMqtt();
     }
 
+    /**
+     * Initializes the client.
+     * -> Set callbacks and settings etc.
+     */
     private void initMqtt() {
         mqttAndroidClient.setCallback(new MqttCallbackExtended() {
             @Override
@@ -72,6 +88,10 @@ public class MqttNoiseMapClient {
         mqttConnectOptions.setUserName(username);
         mqttConnectOptions.setPassword(password.toCharArray());
     }
+
+    /**
+     * Closes the connection.
+     */
     public void disconnect() {
         if(!isMqttConnected) {
             return;
@@ -81,6 +101,10 @@ public class MqttNoiseMapClient {
         } catch (MqttException e) {
         }
     }
+
+    /**
+     * Opens the connection.
+     */
     public void connect() {
         if(isMqttConnected) {
             return;
@@ -110,13 +134,21 @@ public class MqttNoiseMapClient {
         }
     }
 
-    public void postSample(String message) {
+    /**
+     * Publishes a new sample to the browker.
+     * @param message
+     */
+    public void publishSample(String message) {
         MqttMessage msg = new MqttMessage();
         msg.setRetained(true);
         msg.setQos(1);
         msg.setPayload(message.getBytes());
         publish("clients/" + clientId + "/newMeasurement",msg);
     }
+
+    /**
+     * Publishes all buffered messages.
+     */
     public void publishBufferMessages() {
         if(isMqttConnected) {
             int numTries = 0;
@@ -134,6 +166,12 @@ public class MqttNoiseMapClient {
             }
         }
     }
+
+    /**
+     * Publishes a message to a topic.
+     * @param topic Desired topic.
+     * @param msg Desired message.
+     */
     public void publish(String topic, MqttMessage msg) {
         msgBuffer.add(new StoredMqttMessage(topic,msg));
         if(isMqttConnected) {
@@ -143,6 +181,11 @@ public class MqttNoiseMapClient {
         }
     }
 
+    /**
+     * Sends a new request.
+     * @param msg Message.
+     * @throws MqttException Publish failed.
+     */
     public void request(MqttMessage msg) throws MqttException {
 
         if(isMqttConnected) {

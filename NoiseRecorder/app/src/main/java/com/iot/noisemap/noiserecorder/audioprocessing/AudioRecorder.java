@@ -12,6 +12,9 @@ import com.iot.noisemap.noiserecorder.MainActivity;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+/**
+ * Manages the audio recording incl. the audio processor.
+ */
 public class AudioRecorder {
 
     private AudioProcessor fft;
@@ -29,6 +32,13 @@ public class AudioRecorder {
     private String timestampOfLastAverageDbA = "";
     private MainActivity caller;
     Intent locationIntent;
+
+    /**
+     * Creates a new AudioRecorder.
+     * @param caller Calling window.
+     * @param calibrationOffsetInDb Calibration offset.
+     * @param timeBetweenMeasurements Time between two measurements in ms.
+     */
     public AudioRecorder(MainActivity caller, double calibrationOffsetInDb, int timeBetweenMeasurements) {
         this.callingActivity = caller;
         // Bind to LocalService
@@ -62,6 +72,11 @@ public class AudioRecorder {
             }
         }
     };
+
+    /**
+     * Sets the calibration offset.
+     * @param valueInDb Desired calibration offset.
+     */
     public void setCalibrationOffset(double valueInDb) {
         this.fft.setCalibrationOffset(valueInDb);
     }
@@ -78,6 +93,11 @@ public class AudioRecorder {
             recordingHandler.post(runnable);
         }
     }
+
+    /**
+     * Returns whether the recording is active.
+     * @return whether the recording is active.
+     */
     public boolean isRecording() {
         return isRecording;
     }
@@ -108,6 +128,10 @@ public class AudioRecorder {
         return 1;
     }
 
+    /**
+     * Sets the time between two measurements in ms.
+     * @param timeInMs New time between two values.
+     */
     public void setTimeBetweenMeasurements(int timeInMs) {
         timeBetweenMeasurements = timeInMs;
     }
@@ -136,6 +160,10 @@ public class AudioRecorder {
         return lastAverageDbA;
     }
 
+    /**
+     * Returns the timestamp of the last average measurement.
+     * @return Timestamp of the last average measurement.
+     */
     public String getTimestampOfLastAverageDbA() {
         return timestampOfLastAverageDbA;
     }

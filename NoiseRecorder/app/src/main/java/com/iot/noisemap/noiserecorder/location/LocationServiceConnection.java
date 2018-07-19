@@ -8,10 +8,18 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.util.Log;
 
+/**
+ * Manages the service connection that's used to transmit the current location.
+ */
 public class LocationServiceConnection implements ServiceConnection {
     private boolean isBound = false;
     private Messenger service;
 
+    /**
+     * Gets called when the service connets.
+     * @param className Component class name.
+     * @param service corresponding service.
+     */
     public void onServiceConnected(ComponentName className, IBinder service) {
         // This is called when the connection with the service has been
         // established, giving us the object we can use to
@@ -21,7 +29,10 @@ public class LocationServiceConnection implements ServiceConnection {
         this.service = new Messenger(service);
         this.isBound = true;
     }
-
+    /**
+     * Gets called when the service disconnets.
+     * @param className Component class name.
+     */
     public void onServiceDisconnected(ComponentName className) {
         // This is called when the connection with the service has been
         // unexpectedly disconnected -- that is, its process crashed.
@@ -29,6 +40,9 @@ public class LocationServiceConnection implements ServiceConnection {
         this.isBound = false;
     }
 
+    /**
+     * Requests the current location.
+     */
     public void requestLocation() {
         if (!isBound) return;
         // send request location message to the LocationTrackerService

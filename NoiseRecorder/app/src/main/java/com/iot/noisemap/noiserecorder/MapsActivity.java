@@ -17,8 +17,8 @@ import android.widget.Toast;
 
 import java.util.Calendar;
 
-import com.iot.noisemap.noiserecorder.noisemap.HeatMap;
-import com.iot.noisemap.noiserecorder.noisemap.HeatMap.TimePoint;
+import com.iot.noisemap.noiserecorder.noisemap.NoiseMap;
+import com.iot.noisemap.noiserecorder.noisemap.NoiseMap.TimePoint;
 import com.extra.MultiSelectionSpinner;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -29,6 +29,9 @@ import com.google.android.gms.maps.model.LatLng;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Noise map activity.
+ */
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private String accessToken;
@@ -64,9 +67,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     };
     private GoogleMap map;
-    private HeatMap heatmap;
+    private NoiseMap noiseMap;
     private MultiSelectionSpinner spinnerWeekdayFilter;
-    private HeatMap.OverlayType overlayType = HeatMap.OverlayType.OVERLAY_TILES;
+    private NoiseMap.OverlayType overlayType = NoiseMap.OverlayType.OVERLAY_TILES;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -92,7 +95,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(heatmap != null) {
+                if(noiseMap != null) {
                     btnRefresh.setEnabled(false);
                     btnToggleMapOverlay.setEnabled(false);
                     refreshData();
@@ -138,7 +141,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     @Override
                     public void onTimeSet(TimePicker timePicker, int selectedHour, int selectedMinute) {
                         TimePoint newTime = new TimePoint(selectedHour, selectedMinute);
-                        heatmap.setStartTime(newTime);
+                        noiseMap.setStartTime(newTime);
                         btnStartTime.setText(newTime.toString());
                     }
                 }, hour, minute, true);
@@ -160,7 +163,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     @Override
                     public void onTimeSet(TimePicker timePicker, int selectedHour, int selectedMinute) {
                         TimePoint newTime = new TimePoint(selectedHour, selectedMinute);
-                        heatmap.setEndTime(new TimePoint(selectedHour, selectedMinute));
+                        noiseMap.setEndTime(new TimePoint(selectedHour, selectedMinute));
                         btnEndTime.setText(newTime.toString());
                     }
                 }, hour, minute, true);
@@ -205,37 +208,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onResume();
         ((BottomNavigationView)findViewById(R.id.navigation)).setSelectedItemId(R.id.navigation_map);
         setMapType();
-        if(heatmap != null) {
+        if(noiseMap != null) {
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
             String transparencyStr = sharedPref.getString("noisemap_tiles_transparency", "0.2");
             boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
-            heatmap.refresh(false);
+            noiseMap.refresh(false);
             float transparency = 0.2f;
             try {
                 transparency = Float.parseFloat(transparencyStr);
             } catch (NumberFormatException e) {
                 Toast.makeText(this,"Invalid tile transparency setting!",Toast.LENGTH_LONG).show();
             }
-            heatmap.setAlpha(1.0 - transparency);
-            heatmap.setUseMqtt(useMqtt);
+            noiseMap.setAlpha(1.0 - transparency);
+            noiseMap.setUseMqtt(useMqtt);
         }
 
     }
+
+    /**
+     * Toggles the map overlay (heat map <-> tile view)
+     */
     private void toggleMapOverlay() {
-        if(overlayType == HeatMap.OverlayType.OVERLAY_HEATMAP) {
-            overlayType = HeatMap.OverlayType.OVERLAY_TILES;
+        if(overlayType == NoiseMap.OverlayType.OVERLAY_HEATMAP) {
+            overlayType = NoiseMap.OverlayType.OVERLAY_TILES;
         } else {
-            overlayType = HeatMap.OverlayType.OVERLAY_HEATMAP;
+            overlayType = NoiseMap.OverlayType.OVERLAY_HEATMAP;
         }
-        heatmap.setOverlayType(overlayType);
-        heatmap.refresh(false);
+        noiseMap.setOverlayType(overlayType);
+        noiseMap.refresh(false);
     }
 
+    /**
+     * Refreshes the noise map.
+     */
     private void refreshData() {
-        if(heatmap != null) {
-            heatmap.requestSamplesForVisibleArea();
+        if(noiseMap != null) {
+            noiseMap.requestSamplesForVisibleArea();
         }
     }
+
+    /**
+     * Activates the refresh and toggle button.
+     */
     public void activateRefreshButton() {
         btnRefresh.setEnabled(true);
         btnToggleMapOverlay.setEnabled(true);
@@ -247,15 +261,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void updateWeekdayFilter() {
         String newWeekdayFilter = spinnerWeekdayFilter.getSelectedItemsAsString();
 
-        if(heatmap != null) {
-            String curWeekdayFilter = heatmap.getWeekdayFilter();
+        if(noiseMap != null) {
+            String curWeekdayFilter = noiseMap.getWeekdayFilter();
             if(!curWeekdayFilter.equals(newWeekdayFilter) || isFirstSelect) {
-                heatmap.setWeekdayFilter(newWeekdayFilter);
-                heatmap.refresh(true);
+                noiseMap.setWeekdayFilter(newWeekdayFilter);
+                noiseMap.refresh(true);
             }
         }
         isFirstSelect = false;
     }
+
+    /**
+     * Gets called when the map is loaded and ready.
+     * @param googleMap The map.
+     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
@@ -272,8 +291,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (NumberFormatException e) {
             Toast.makeText(this,"Invalid tile transparency setting!",Toast.LENGTH_LONG).show();
         }
-        heatmap = new HeatMap(map, 1.0 - transparency, accessToken, username, password, useMqtt, this);
+        noiseMap = new NoiseMap(map, 1.0 - transparency, accessToken, username, password, useMqtt, this);
         updateWeekdayFilter();
-        heatmap.requestSamplesForVisibleArea();
+        noiseMap.requestSamplesForVisibleArea();
     }
 }

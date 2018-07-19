@@ -24,11 +24,22 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.security.InvalidParameterException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Contains builders for the HTTP requests.
+ */
 public final class RestCallFactory {
 
+    /**
+     * Creates a new get request.
+     * @param url URL.
+     * @param accessToken Access token.
+     * @param caller Caller.
+     * @return The built request.
+     */
     public static StringRequest createGetRequest(final String url, final String accessToken, final OnRequestResponseCallback caller) {
         return new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
@@ -71,6 +82,13 @@ public final class RestCallFactory {
         };
     }
 
+    /**
+     * Creates a new post request.
+     * @param url URL.
+     * @param accessToken Access token.
+     * @param jsonBody Body of the post request..
+     * @return The built request.
+     */
     public static JsonObjectRequest createPostSampleRequest(JSONObject jsonBody, String url, final String accessToken) {
         return new JsonObjectRequest(url, jsonBody,
                 new Response.Listener<JSONObject>() {
@@ -102,6 +120,15 @@ public final class RestCallFactory {
         };
     }
 
+
+    /**
+     * Creates a new api token request.
+     * @param username Username.
+     * @param password Password.
+     * @param url URL.
+     * @param activity Calling activity.
+     * @return The built request.
+     */
     public static StringRequest createApiTokenRequest(final String username, final String password, String url, final LoginActivity activity) {
         return new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
@@ -202,14 +229,24 @@ public final class RestCallFactory {
         };
     }
 
+    /**
+     * Creates a new api token request.
+     * @param username Username.
+     * @param password Password.
+     * @param confirmPassword Password.
+     * @param url URL.
+     * @param activity Calling activity.
+     * @return The built request.
+     * @throws InvalidParameterException Parameters are invalid (null).
+     */
     public static JsonObjectRequest createRegisterUserRequest(final String username, final String password,
                                                               final String confirmPassword,final String url,
                                                               final LoginActivity activity)
-                                                        throws IllegalAccessException {
+                                                        throws InvalidParameterException {
 
-        if(username == null) throw new IllegalAccessException("username");
-        if(password == null) throw new IllegalAccessException("password");
-        if(confirmPassword == null) throw new IllegalAccessException("confirmPassword");
+        if(username == null) throw new InvalidParameterException("username");
+        if(password == null) throw new InvalidParameterException("password");
+        if(confirmPassword == null) throw new InvalidParameterException("confirmPassword");
 
         JSONObject jsonBody = new JSONObject();
         try {
