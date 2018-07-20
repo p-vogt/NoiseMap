@@ -100,11 +100,10 @@ public class AudioProcessor {
             //4
             double magn = Math.sqrt(real*real+imag*imag);
 
-            // threshold of the human hearing = reference for the db calculation
             if(magn > 0.0 ) {
                 // 5
                 double dbFreqA = (10.0 * (Math.log10(magn*magn*a_weighting[i]) - REFERENCE_LOG) + this.calibrationOffset_db);
-                //6
+                // 6
                 dbFreqA = (10.0 * Math.pow(10,dbFreqA/10));
                 // 7a sum in log
                 sumOfAmplitudes += dbFreqA;
