@@ -212,7 +212,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
             String transparencyStr = sharedPref.getString("noisemap_tiles_transparency", "0.2");
             boolean useMqtt = sharedPref.getBoolean("noisemap_general_useMqtt", true);
-            noiseMap.refresh(false);
+            if(!noiseMap.isNoiseMatrixEmpty()) {
+                noiseMap.refresh(false);
+            }
             float transparency = 0.2f;
             try {
                 transparency = Float.parseFloat(transparencyStr);
@@ -255,8 +257,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnToggleMapOverlay.setEnabled(true);
     }
     /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
+     * Updates the weekday filter and refreshes the noise map.
      */
     private void updateWeekdayFilter() {
         String newWeekdayFilter = spinnerWeekdayFilter.getSelectedItemsAsString();
@@ -265,7 +266,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             String curWeekdayFilter = noiseMap.getWeekdayFilter();
             if(!curWeekdayFilter.equals(newWeekdayFilter) || isFirstSelect) {
                 noiseMap.setWeekdayFilter(newWeekdayFilter);
-                noiseMap.refresh(true);
+                if(!isFirstSelect) {
+                    noiseMap.refresh(true);
+                }
             }
         }
         isFirstSelect = false;
@@ -284,7 +287,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setMapType();
         // could be changed to the current location of the user
         LatLng startLocation = new LatLng(52.036282, 8.527138);
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(startLocation,15.5f));
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(startLocation,15.2f));
         float transparency = 0.2f;
         try {
             transparency = Float.parseFloat(transparencyStr);

@@ -723,7 +723,7 @@ public class NoiseMap implements OnRequestResponseCallback, INoiseMapMqttConsume
      * Is the noise matrix empty?
      * @return Is the noise matrix empty?
      */
-    private boolean isNoiseMatrixEmpty() {
+    public boolean isNoiseMatrixEmpty() {
         int sizeOfNoiseMatrix = noiseMatrix.size();
 
         for(int i = 0; i < sizeOfNoiseMatrix; i++) {
