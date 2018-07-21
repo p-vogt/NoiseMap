@@ -691,6 +691,7 @@ public class NoiseMap implements OnRequestResponseCallback, INoiseMapMqttConsume
             double meanNoise = cachedMeanNoise.get(counter);
             if(isGridVisible || meanNoise > 0.0d) {
                 Polygon poly = addPolygonToMap(option);
+                poly.setTag(String.format("%.2f", meanNoise) + " dbA");
                 polygons.add(poly);
             }
             counter++;
