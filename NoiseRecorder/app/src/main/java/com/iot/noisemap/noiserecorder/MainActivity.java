@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
             Date date = format.parse(timestamp);
             DecimalFormat df = new DecimalFormat("#.00");
             output +=   "Time:           " + timestamp.substring(11); // remove date
-            output += "\nNoise:          " + df.format(jsonSample.getDouble("noiseValue"));
+            output += "\nNoise:          " + df.format(jsonSample.getDouble("noiseValue")) + " dBA";
             output += "\nLongitude:  " + df.format(jsonSample.getDouble("longitude"));
             output += "\nLatitude:      " + df.format(jsonSample.getDouble("latitude"));
             output += "\n";
