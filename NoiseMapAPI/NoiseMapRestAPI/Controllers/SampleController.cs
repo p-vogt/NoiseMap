@@ -41,8 +41,6 @@ namespace NoiseMapRestAPI.Controllers
             db.Dispose();
         }
 
-
-
         // GET: api/Sample/5
         [Authorize]
         public HttpResponseMessage Get(int id)

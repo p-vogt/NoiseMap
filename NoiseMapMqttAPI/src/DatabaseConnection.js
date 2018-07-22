@@ -72,13 +72,13 @@ module.exports = class DatabaseConnection {
                 timeFilter = `(DATEPART(HOUR, timestamp) = ${start.hour} AND DATEPART(MINUTE, timestamp) >= ${start.minute} AND DATEPART(MINUTE, timestamp) <= ${end.minute})`
             } else { //start > end 
                 timeFilter = `(        
-                    DATEPART(HOUR, timestamp) = ${end.hour} AND DATEPART(MINUTE, timestamp) >= ${end.minute}
+                    DATEPART(HOUR, timestamp) = ${end.hour} AND DATEPART(MINUTE, timestamp) <= ${end.minute}
                 OR
-                    DATEPART(HOUR, timestamp) > ${end.hour}
+                    DATEPART(HOUR, timestamp) <= ${end.hour}
                 OR
-                    DATEPART(HOUR, timestamp) = ${start.hour} AND DATEPART(MINUTE, timestamp) < ${start.minute}
+                    DATEPART(HOUR, timestamp) = ${start.hour} AND DATEPART(MINUTE, timestamp) >= ${start.minute}
                 OR
-                    DATEPART(HOUR, timestamp) < ${start.hour}
+                    DATEPART(HOUR, timestamp) > ${start.hour}
                 )`
             }
             const locationFilter = `(longitude BETWEEN ${longitudeStart} AND ${longitudeEnd} AND latitude BETWEEN ${latitudeStart} AND ${latitudeEnd})`;

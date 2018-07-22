@@ -230,6 +230,8 @@ public class NoiseMap implements OnRequestResponseCallback, INoiseMapMqttConsume
         apiUrl += "&latitudeEnd=" + latitudeEnd;
         apiUrl += "&longitudeStart=" + longitudeStart;
         apiUrl += "&longitudeEnd=" + longitudeEnd;
+        apiUrl += "&startTime=" + start.toString();
+        apiUrl += "&endTime=" + end.toString();
         StringRequest apiRequest = RestCallFactory.createGetRequest(apiUrl,accessToken, this);
         requestQueue.add(apiRequest);
     }

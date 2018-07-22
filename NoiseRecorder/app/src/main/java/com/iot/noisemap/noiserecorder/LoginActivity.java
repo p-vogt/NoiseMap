@@ -441,7 +441,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      */
     public class RegisterUserTask extends AsyncTask<Void, Void, Boolean> {
         private static final String TAG = "UserRegisterTask";
-        private final String TOKEN_URL = "http://noisemaprestapi.azurewebsites.net/api/Account/Register";
+        private final String TOKEN_URL = Config.API_BASE_URL + "Account/Register";
         private final String username;
         private final String password;
         private final String confirmPassword;
