@@ -207,8 +207,7 @@ public class MainActivity extends AppCompatActivity implements INoiseMapMqttCons
                     btnStartStop.setBackgroundColor(Color.parseColor("#cc0000"));
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     if(switchOfflineMode.isChecked()) {
-                        Toast.makeText(MainActivity.this,"!!!OFFLINE MODE ACTIVATED!!!",Toast.LENGTH_LONG).show();
-                        btnStartStop.setText("OFFLINE");
+                        btnStartStop.setText("Stop (OFFLINE)");
                         btnStartStop.setBackgroundColor(Color.parseColor("#ffff00"));
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     } else {
