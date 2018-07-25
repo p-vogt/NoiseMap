@@ -10,7 +10,7 @@ namespace NoiseMapRestAPI.API
         public static FilteredSamples getSamples(NoiseMapEntities db, RequestSamplesOptions options)
         {
             // filter the region
-            if(options == null)
+            if (options == null)
             {
                 return new FilteredSamples(db.NOISE_SAMPLE);
             }
@@ -103,8 +103,6 @@ namespace NoiseMapRestAPI.API
                                 || x.timestamp.Value.Hour == start.Hour && x.timestamp.Value.Minute >= start.Minute
                                 || x.timestamp.Value.Hour > start.Hour);
             }
-
-            return null;
         }
     }
     public class FilteredSamples
@@ -139,7 +137,7 @@ namespace NoiseMapRestAPI.API
 
         public static RequestSamplesOptions FromQuery(IEnumerable<KeyValuePair<string, string>> queryNameValuePairs)
         {
-            var query = queryNameValuePairs.ToDictionary(x => x.Key, x => x.Value.Replace(",","."));
+            var query = queryNameValuePairs.ToDictionary(x => x.Key, x => x.Value.Replace(",", "."));
             // filter the region 
             var longitudeStart = 0.0d;
             var longitudeEnd = 0.0d;
@@ -148,7 +146,7 @@ namespace NoiseMapRestAPI.API
             var startTime = "00:00";
             var endTime = "00:00";
             var isValid = false;
-            
+
             if (query.Keys.Contains(nameof(longitudeStart)) && query.Keys.Contains(nameof(longitudeEnd))
                 && query.Keys.Contains(nameof(latitudeStart)) && query.Keys.Contains(nameof(latitudeEnd))
                 && query.Keys.Contains(nameof(startTime)) && query.Keys.Contains(nameof(endTime)))
